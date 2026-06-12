@@ -1,6 +1,32 @@
 /* ============================================
    MD-Beautify · 全局样式 (Mobile-First)
+   主题色：小红书红色调
    ============================================ */
+
+:root {
+  /* 小红书主色系 */
+  --color-primary: #ff2442;
+  --color-primary-hover: #fe2c55;
+  --color-primary-light: #ffe7eb;
+  --color-primary-dark: #e61e3a;
+
+  /* 中性色 */
+  --color-text: #2c3e50;
+  --color-text-light: #4a5568;
+  --color-text-muted: #6a737d;
+  --color-text-placeholder: #999;
+  --color-bg: #f5f7fa;
+  --color-bg-card: #ffffff;
+  --color-border: #eaecef;
+  --color-border-light: #dfe2e5;
+  --color-bg-soft: #f6f8fa;
+
+  /* 状态色 */
+  --color-success: #28a745;
+  --color-danger: #d9534f;
+  --color-link: #ff2442;
+  --color-code: #e83e8c;
+}
 
 *,
 *::before,
@@ -18,14 +44,14 @@ body,
     "Microsoft YaHei", "Helvetica Neue", Arial, sans-serif;
   font-size: 16px;
   line-height: 1.6;
-  color: #2c3e50;
-  background: #f5f7fa;
+  color: var(--color-text);
+  background: var(--color-bg);
   -webkit-font-smoothing: antialiased;
   -webkit-tap-highlight-color: transparent;
 }
 
 a {
-  color: #0366d6;
+  color: var(--color-link);
   text-decoration: none;
 }
 a:hover {
@@ -43,7 +69,6 @@ img {
   display: block;
 }
 
-/* 响应式断点：>=768px 升级为多栏宽版 */
 @media (min-width: 768px) {
   body {
     font-size: 16px;

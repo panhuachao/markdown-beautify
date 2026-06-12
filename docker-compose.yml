@@ -18,10 +18,10 @@ services:
     container_name: md-beautify-backend
     restart: unless-stopped
     ports:
-      - "3000:3000"
+      - "7001:7001"
     environment:
       - NODE_ENV=production
-      - PORT=3000
+      - PORT=7001
       - HOST=0.0.0.0
     volumes:
       # 持久化数据（Markdown 文件 + 元数据）

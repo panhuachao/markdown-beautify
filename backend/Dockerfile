@@ -20,15 +20,15 @@ RUN mkdir -p /app/data/markdown /app/data/meta
 
 # 环境变量
 ENV NODE_ENV=production \
-    PORT=3000 \
+    PORT=7001 \
     HOST=0.0.0.0
 
 # 暴露端口
-EXPOSE 3000
+EXPOSE 7001
 
 # 健康检查
 HEALTHCHECK --interval=30s --timeout=3s --start-period=10s --retries=3 \
-  CMD wget --no-verbose --tries=1 --spider http://localhost:3000/health || exit 1
+  CMD wget --no-verbose --tries=1 --spider http://localhost:7001/health || exit 1
 
 # 启动命令
 CMD ["node", "server.js"]

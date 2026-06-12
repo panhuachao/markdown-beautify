@@ -3,7 +3,7 @@
 }
 
 .hero {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #ff2442 0%, #fe2c55 100%);
   color: #fff;
   padding: 28px 18px 24px;
   text-align: center;
@@ -33,7 +33,7 @@
   color: #999;
 }
 .state--error {
-  color: #d9534f;
+  color: var(--color-danger);
 }
 .state--empty p {
   margin: 4px 0;
