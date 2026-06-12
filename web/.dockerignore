@@ -1,0 +1,16 @@
+# 前端 .dockerignore
+node_modules/
+dist/
+.vite/
+*.log
+.git/
+.gitignore
+.env
+.env.*
+.vscode/
+.idea/
+Dockerfile
+nginx.conf
+.dockerignore
+README.md
+*.md

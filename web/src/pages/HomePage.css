@@ -1,0 +1,62 @@
+.home-page {
+  width: 100%;
+}
+
+.hero {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: #fff;
+  padding: 28px 18px 24px;
+  text-align: center;
+}
+.hero h1 {
+  margin: 0 0 6px;
+  font-size: 20px;
+  font-weight: 700;
+}
+.hero p {
+  margin: 0;
+  font-size: 13px;
+  opacity: 0.92;
+}
+
+.container {
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 18px;
+}
+
+.state {
+  background: #fff;
+  border-radius: 10px;
+  padding: 40px 20px;
+  text-align: center;
+  color: #999;
+}
+.state--error {
+  color: #d9534f;
+}
+.state--empty p {
+  margin: 4px 0;
+  font-size: 15px;
+  color: #6a737d;
+}
+.state--empty .hint {
+  font-size: 13px;
+  color: #999;
+}
+
+@media (min-width: 768px) {
+  .hero {
+    padding: 48px 24px 40px;
+  }
+  .hero h1 {
+    font-size: 28px;
+  }
+  .hero p {
+    font-size: 14px;
+  }
+  .container {
+    max-width: 960px;
+    padding: 32px 24px;
+  }
+}

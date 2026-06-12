@@ -1,0 +1,71 @@
+# MD-Beautify · Docker Compose 编排
+# 一键启动完整应用：后端 API + 前端 (nginx 反代)
+#
+# 用法:
+#   docker compose up -d --build       # 后台启动并构建
+#   docker compose logs -f             # 查看日志
+#   docker compose down                # 停止
+#   docker compose down -v             # 停止并删除数据卷
+
+version: '3.8'
+
+services:
+  # ---------------- 后端 API 服务 ----------------
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: md-beautify-backend
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+      - HOST=0.0.0.0
+    volumes:
+      # 持久化数据（Markdown 文件 + 元数据）
+      - backend-data:/app/data
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3000/health"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+      start_period: 10s
+    networks:
+      - md-beautify-net
+
+  # ---------------- 前端 Web 服务 ----------------
+  web:
+    build:
+      context: ./web
+      dockerfile: Dockerfile
+      args:
+        VITE_API_BASE: /api
+    container_name: md-beautify-web
+    restart: unless-stopped
+    ports:
+      - "8080:80"  # 宿主机 8080 → 容器 80
+    depends_on:
+      backend:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost/"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+      start_period: 5s
+    networks:
+      - md-beautify-net
+
+# ---------------- 数据卷 ----------------
+volumes:
+  backend-data:
+    name: md-beautify-backend-data
+    driver: local
+
+# ---------------- 网络 ----------------
+networks:
+  md-beautify-net:
+    name: md-beautify-net
+    driver: bridge

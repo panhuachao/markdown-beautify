@@ -1,0 +1,17 @@
+# 后端 .dockerignore - 减少构建上下文大小
+node_modules/
+npm-debug.log*
+*.log
+.git/
+.gitignore
+.env
+.env.*
+.vscode/
+.idea/
+data/markdown/*
+data/meta/*
+!data/markdown/.gitkeep
+!data/meta/.gitkeep
+README.md
+test-api.sh
+*.md

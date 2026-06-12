@@ -1,0 +1,87 @@
+.app-shell {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+
+.topbar {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: #fff;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
+}
+
+.topbar-inner {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 14px 18px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.logo {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #fff;
+  font-weight: 700;
+  font-size: 18px;
+  text-decoration: none;
+}
+.logo:hover {
+  text-decoration: none;
+  opacity: 0.92;
+}
+.logo-icon {
+  font-size: 22px;
+}
+
+.nav {
+  display: flex;
+  gap: 18px;
+}
+.nav-link {
+  color: rgba(255, 255, 255, 0.92);
+  font-size: 14px;
+  text-decoration: none;
+  padding: 4px 8px;
+  border-radius: 4px;
+  transition: background 0.15s;
+}
+.nav-link:hover {
+  background: rgba(255, 255, 255, 0.15);
+  text-decoration: none;
+}
+
+.main {
+  flex: 1;
+  width: 100%;
+}
+
+.footer {
+  padding: 20px 18px;
+  text-align: center;
+  color: #999;
+  font-size: 12px;
+  background: transparent;
+  border-top: 1px solid #eaecef;
+}
+.footer a {
+  color: #999;
+}
+
+@media (min-width: 768px) {
+  .topbar-inner {
+    padding: 18px 32px;
+  }
+  .logo {
+    font-size: 20px;
+  }
+  .footer {
+    padding: 28px;
+    font-size: 13px;
+  }
+}

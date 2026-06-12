@@ -1,0 +1,62 @@
+{
+  "name": "md-beautify",
+  "version": "0.1.0",
+  "description": "MD-Beautify · Markdown 一键发布与分享。将 AI 生成的 Markdown 实时渲染为 Mobile-First 的精美网页，返回可分享的短链接。",
+  "author": "MD-Beautify Team",
+  "license": "MIT",
+  "platforms": [
+    "openclaw",
+    "workbuddy",
+    "claude-code",
+    "cursor"
+  ],
+  "entry": "index.js",
+  "triggers": [
+    "发布到 MD-Beautify",
+    "publish to md-beautify",
+    "/md-publish",
+    "上传 Markdown"
+  ],
+  "config": {
+    "apiBaseUrl": {
+      "type": "string",
+      "default": "http://localhost:3000",
+      "description": "MD-Beautify 后端服务地址"
+    },
+    "apiKey": {
+      "type": "string",
+      "default": "",
+      "description": "API 认证密钥（MVP 阶段可不填）"
+    }
+  },
+  "actions": [
+    {
+      "name": "publish",
+      "description": "将 Markdown 内容发布到 MD-Beautify，返回可分享的移动端优先渲染链接",
+      "parameters": {
+        "content": {
+          "type": "string",
+          "required": true,
+          "description": "Markdown 文本内容"
+        },
+        "title": {
+          "type": "string",
+          "required": false,
+          "description": "内容标题（不传则自动从 Markdown 第一个 H1 提取）"
+        },
+        "tags": {
+          "type": "array",
+          "required": false,
+          "description": "标签数组，例如 [\"NLP\", \"2026\"]"
+        }
+      },
+      "returns": {
+        "success": "boolean",
+        "contentId": "string - 内容短标识 slug",
+        "url": "string - 移动端优先的分享链接",
+        "title": "string - 内容标题",
+        "createdAt": "string - ISO 时间戳"
+      }
+    }
+  ]
+}
