@@ -1,0 +1,267 @@
+/* =============================================
+   MyPage · 个人空间
+   ============================================= */
+
+.my-page {
+  width: 100%;
+  background: #f5f7fa;
+  min-height: calc(100vh - 130px);
+}
+
+/* ===== 顶部用户条 ===== */
+.my-header {
+  background: linear-gradient(135deg, #ff2442 0%, #fe2c55 100%);
+  color: #fff;
+  padding: 24px 18px;
+  position: relative;
+  overflow: hidden;
+}
+.my-header::after {
+  content: '';
+  position: absolute;
+  top: -40%;
+  right: -10%;
+  width: 300px;
+  height: 300px;
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 50%;
+  pointer-events: none;
+}
+
+.my-header-inner {
+  max-width: 720px;
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  position: relative;
+  z-index: 1;
+  flex-wrap: wrap;
+}
+
+.my-user {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  min-width: 0;
+}
+
+.my-avatar {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.95);
+  color: var(--color-primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 22px;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+.my-name {
+  font-size: 18px;
+  font-weight: 700;
+  color: #fff;
+  margin-bottom: 2px;
+}
+.my-email {
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.85);
+  word-break: break-all;
+}
+
+.btn-upload {
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 500;
+  padding: 10px 18px;
+  background: #fff;
+  color: var(--color-primary);
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.15s;
+  flex-shrink: 0;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+.btn-upload:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+.btn-upload:active {
+  transform: scale(0.99);
+}
+
+/* ===== Tabs ===== */
+.my-tabs-wrap {
+  background: #fff;
+  border-bottom: 1px solid var(--color-border);
+  position: sticky;
+  top: 56px;
+  z-index: 50;
+}
+
+.my-tabs {
+  max-width: 720px;
+  margin: 0 auto;
+  display: flex;
+  padding: 0 18px;
+  gap: 4px;
+}
+
+.my-tab {
+  font-family: inherit;
+  font-size: 15px;
+  font-weight: 500;
+  padding: 14px 18px;
+  background: transparent;
+  border: none;
+  color: #6a737d;
+  cursor: pointer;
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  transition: color 0.15s;
+}
+.my-tab:hover {
+  color: #1a1a1a;
+}
+.my-tab.is-active {
+  color: var(--color-primary);
+  font-weight: 600;
+}
+.my-tab.is-active::after {
+  content: '';
+  position: absolute;
+  bottom: -1px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 32px;
+  height: 3px;
+  background: linear-gradient(135deg, #ff2442 0%, #fe2c55 100%);
+  border-radius: 3px 3px 0 0;
+}
+
+.my-tab-count {
+  display: inline-block;
+  background: #f1f3f5;
+  color: #4a5568;
+  font-size: 11px;
+  padding: 1px 7px;
+  border-radius: 100px;
+  min-width: 20px;
+  text-align: center;
+}
+.my-tab.is-active .my-tab-count {
+  background: var(--color-primary-light);
+  color: var(--color-primary);
+}
+
+/* ===== 内容列表 ===== */
+.my-content {
+  padding: 18px 0;
+}
+
+.my-container {
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 0 18px;
+}
+
+.content-row {
+  position: relative;
+  margin-bottom: 12px;
+}
+.content-row-meta {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  padding: 0 4px;
+  margin-top: -6px;
+  margin-bottom: 8px;
+  gap: 8px;
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+.content-row:hover .content-row-meta {
+  opacity: 1;
+}
+.content-row-time {
+  font-size: 11px;
+  color: #999;
+}
+
+.btn-card-delete {
+  background: #fff;
+  border: 1px solid var(--color-border);
+  border-radius: 50%;
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.btn-card-delete:hover {
+  background: #ffe7eb;
+}
+
+/* ===== 状态 ===== */
+.state {
+  background: #fff;
+  border-radius: 12px;
+  padding: 50px 20px;
+  text-align: center;
+  color: #999;
+}
+.state--error {
+  color: var(--color-danger);
+}
+.state--empty p {
+  margin: 4px 0;
+  font-size: 15px;
+  color: #6a737d;
+}
+.state--empty .hint {
+  font-size: 13px;
+  color: #999;
+}
+
+/* ===== PC ===== */
+@media (min-width: 768px) {
+  .my-header {
+    padding: 32px 24px;
+  }
+  .my-header-inner {
+    max-width: 960px;
+  }
+  .my-avatar {
+    width: 56px;
+    height: 56px;
+    font-size: 24px;
+  }
+  .my-name {
+    font-size: 20px;
+  }
+  .my-tabs-wrap {
+    top: 60px;
+  }
+  .my-tabs {
+    max-width: 960px;
+    padding: 0 24px;
+  }
+  .my-tab {
+    font-size: 16px;
+    padding: 16px 24px;
+  }
+  .my-container {
+    max-width: 960px;
+    padding: 0 24px;
+  }
+}

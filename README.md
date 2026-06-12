@@ -1,211 +1,160 @@
-# MD-Beautify · MVP
+# MD-Beautify · MVP v0.3
 
-> AI Agent 内容展示与分享平台 — 前后端分离架构
+> AI Agent 内容展示与分享平台 — 前后端分离 + 用户系统 + 个人空间
+
+## v0.3 新增能力
+
+| 模块 | 功能 |
+|------|------|
+| 用户系统 | 邮箱注册 / 登录 / JWT 认证 / 密码加密 (bcrypt) |
+| API 密钥 | 用户在 Web 端生成 N 个 API Key，AI Agent 用 `X-API-Key` 认证 |
+| 个人空间 | "我的"页面按时间维度（今日/所有）浏览自己的内容 |
+| 落地页 | 首页改为产品介绍落地页（Hero + 痛点 + 流程 + 特性 + 接入步骤 + CTA） |
+| Web 上传 | 已登录用户在"我的"页直接写 Markdown 上传（弹层） |
+| 资料管理 | 改昵称 / 改密码 / 密钥管理 / 登出 |
+
+## 前端页面结构
+
+| 路径 | 页面 | 用途 |
+|------|------|------|
+| `/`           | **HomePage**     | 产品介绍落地页（Hero / 痛点 / 解决方案 / 特性 / 接入步骤 / CTA） |
+| `/my`         | **MyPage**       | 个人空间（顶部用户条 + 今日/所有 tab + 内容卡片 + 悬浮删除） |
+| `/p/:slug`    | **ContentPage**  | 内容详情（Markdown 渲染 + 复制链接/原文 + 查看原始） |
+| `/settings`   | **SettingsPage** | 个人资料 + 修改密码 + API 密钥管理 |
+| `/login`      | **LoginPage**    | 登录页 |
+| `/register`   | **RegisterPage** | 注册页 |
+| `/about`      | **AboutPage**    | 项目说明（保留） |
 
 ## 架构总览
 
 ```
 md-beautify/
-├── backend/                # Node.js + Express 纯 REST API
-│   ├── server.js           # API 入口（不含 HTML 模板渲染）
+├── backend/                # Node.js + Express REST API
+│   ├── server.js           # v0.3：用户系统 + JWT + API Key
 │   ├── package.json
-│   └── data/               # 内容存储（运行时自动创建）
-│       ├── markdown/       # 原始 .md 文件
-│       └── meta/           # .json 元数据
+│   ├── test-api.sh
+│   ├── Dockerfile
+│   └── data/
+│       ├── markdown/       # 原始 .md
+│       ├── meta/           # 内容元数据（含 userId）
+│       ├── users/          # 用户数据
+│       └── keys/           # API 密钥（仅存 hash）
 ├── md-beautify-skill/      # AI Agent Skill
-│   ├── skill.json          # Skill 清单（OpenClaw/WorkBuddy 读取）
-│   ├── index.js            # Skill 入口（执行 publish 动作）
-│   └── test.js             # 端到端测试脚本
-├── web/                    # React + Vite 前端 SPA
+│   ├── skill.json          # v0.3：含 apiKey 配置
+│   ├── index.js            # v0.3：支持 X-API-Key 认证
+│   └── test.js
+├── web/                    # React + Vite 前端
 │   ├── src/
-│   │   ├── pages/          # HomePage / ContentPage / AboutPage
-│   │   ├── components/     # Layout / ContentCard
-│   │   ├── api/            # API 客户端
-│   │   ├── styles/         # 全局样式
+│   │   ├── context/AuthContext.jsx
+│   │   ├── api/client.js   # 自动注入 JWT
+│   │   ├── pages/
+│   │   │   ├── HomePage.jsx       # v0.3 改造：产品落地页
+│   │   │   ├── MyPage.jsx         # v0.3 新增：个人空间
+│   │   │   ├── LoginPage.jsx
+│   │   │   ├── RegisterPage.jsx
+│   │   │   ├── SettingsPage.jsx
+│   │   │   ├── ContentPage.jsx
+│   │   │   └── AboutPage.jsx
+│   │   ├── components/
+│   │   │   ├── Layout.jsx         # v0.3：导航 含"我的"
+│   │   │   ├── ContentCard.jsx
+│   │   │   └── UploadModal.jsx
 │   │   ├── App.jsx
-│   │   └── main.jsx
-│   ├── public/             # 静态资源（favicon 等）
+│   │   ├── main.jsx
+│   │   └── styles/
+│   ├── public/
 │   ├── index.html
 │   ├── package.json
-│   └── vite.config.js      # 含 /api 代理到后端
+│   └── vite.config.js
 ├── prd.md
+├── DOCKER.md
 └── README.md
 ```
 
-## 一句话定位
-
-> **AI Agent（如 OpenClaw / WorkBuddy）调用 Skill 上传 Markdown → 后端存储+渲染 HTML → 前端 React 拉取 API 展示 Mobile-First 页面**
-
 ## 快速开始
 
-### 1. 启动后端 API
-
 ```bash
-cd backend
-npm install
-npm start
-```
+# 1. 启动后端
+cd backend && npm install && npm start
+# → http://localhost:3000
 
-服务监听 `http://localhost:3000`，仅提供 REST API。
+# 2. 启动前端
+cd web && npm install && npm run dev
+# → http://localhost:5173
 
-### 2. 启动前端 Web
+# 3. 体验完整流程
+#   - 访问 http://localhost:5173 → 查看落地页
+#   - 点击"免费注册" → 注册并自动登录
+#   - 点击导航"我的" → 进入个人空间
+#   - 点击"发布新内容" → 上传 Markdown
+#   - 点击"设置" → 生成 API Key
 
-```bash
-cd web
-npm install
-npm run dev
-```
-
-Vite 开发服务器 `http://localhost:5173`，通过 `vite.config.js` 的 `proxy` 自动把 `/api/*` 转发到后端 3000 端口，避免跨域。
-
-### 3. 生产构建
-
-```bash
-cd web
-npm run build      # 输出到 web/dist/
-npm run preview    # 本地预览构建产物
-```
-
-### 4. 测试 Skill
-
-```bash
+# 4. 测试 Skill
 cd md-beautify-skill
-node test.js
+MD_BEAUTIFY_API_KEY=<你的密钥> node test.js
 ```
 
-会调用 Skill 的 `publish` 动作向 `http://localhost:3000/api/publish` 发送 Markdown，返回分享链接。
+## API 端点（v0.3）
 
-## API 端点
-
-| Method | Path | 用途 |
+### 公开
+| Method | Path | 说明 |
 |--------|------|------|
-| GET    | `/api/contents`        | 列出所有内容（按时间倒序） |
-| GET    | `/api/contents/:slug`  | 内容详情（原始 MD + 渲染后 HTML） |
-| POST   | `/api/publish`         | 发布 Markdown（AI Agent Skill 调用） |
-| DELETE | `/api/contents/:slug`  | 删除内容 |
-| GET    | `/health`              | 健康检查 |
+| GET    | `/health`                       | 健康检查 |
+| POST   | `/api/auth/register`            | 注册 |
+| POST   | `/api/auth/login`               | 登录 → JWT |
+| GET    | `/api/contents?all=1`           | 公开内容（无 userId 的历史数据）|
+| GET    | `/api/contents/:slug`           | 内容详情 |
 
-### `POST /api/publish` 请求示例
+### 需认证 (Bearer Token 或 X-API-Key)
+| Method | Path | 说明 |
+|--------|------|------|
+| GET    | `/api/auth/me`                  | 当前用户 |
+| PATCH  | `/api/auth/me`                  | 更新资料 |
+| POST   | `/api/auth/change-password`     | 改密码 |
+| GET    | `/api/contents`                 | 自己的内容（"我的"页） |
+| POST   | `/api/publish`                  | 发布 Markdown |
+| DELETE | `/api/contents/:slug`           | 删除（仅本人） |
+| GET    | `/api/keys`                     | 列出 API Key |
+| POST   | `/api/keys`                     | 生成新 Key（明文只返一次） |
+| DELETE | `/api/keys/:id`                 | 删除 Key |
 
-```bash
-curl -X POST http://localhost:3000/api/publish \
-  -H "Content-Type: application/json" \
-  -d '{
-    "content": "# 标题\nMarkdown 内容...",
-    "title": "可选标题",
-    "tags": ["tag1", "tag2"]
-  }'
-```
+## 关键设计
 
-返回：
-```json
-{
-  "success": true,
-  "contentId": "a1b2c3d4",
-  "slug": "a1b2c3d4",
-  "title": "标题",
-  "url": "http://localhost:3000/p/a1b2c3d4",
-  "createdAt": "2026-06-12T..."
-}
-```
+### 1. 落地页 vs 空间页分离
+- **`/`** = 营销页（让访客理解产品） → 引导注册
+- **`/my`** = 个人工作台（已登录用户用） → 看到自己的内容
+- 公开内容（无 userId 的历史数据）通过 `?all=1` 仍可访问，但前端不在落地页展示
 
-## 前端路由
+### 2. API Key 的双重身份
+- 已登录 Web 用户看到的"自己的内容"= 该 userId 下的所有内容（含 Agent 用 Key 发布的）
+- AI Agent 用 API Key 发布的内容 → 归属到 Key 对应的用户下
+- 流程：用户生成 Key → 把 Key 填入 Agent → Agent 一键发布 → 用户在"我的"页看到
 
-| Path | 组件 | 说明 |
-|------|------|------|
-| `/`         | `HomePage`    | 内容列表（卡片式） |
-| `/p/:slug`  | `ContentPage` | 内容详情（Markdown 渲染） |
-| `/about`    | `AboutPage`   | 项目说明 |
+### 3. Mobile-First 单一策略
+全站统一断点 `<768px / ≥768px`：
+- 首页 Hero 移动端单列、PC 端大标题
+- "我的"页 Tab 在移动端贴顶、PC 端更宽间距
+- 所有按钮均有 `:active` 状态反馈（小红书风）
 
-## MVP 已实现能力
+## 端到端测试覆盖
 
-| 能力 | 状态 | 说明 |
-|------|------|------|
-| 后端 REST API | ✅ | 4 个端点完整可用 |
-| 前端 SPA | ✅ | React 18 + Vite 5 + React Router 6 |
-| AI Agent Skill | ✅ | `publish` action |
-| 文件系统存储 | ✅ | `data/markdown/` + `data/meta/` |
-| Markdown 实时渲染 | ✅ | marked + highlight.js（10+ 语言） |
-| Mobile-First 适配 | ✅ | 单断点策略 (<768px / ≥768px) |
-| CORS | ✅ | 允许 Vite dev 跨域 |
-| Vite API 代理 | ✅ | 开发态零配置 |
-| 浏览统计 | ✅ | 详情接口内 +1 |
-| 删除内容 | ✅ | DELETE API |
-| 代码高亮 | ✅ | GitHub 风格主题 |
-| 分享链接复制 | ✅ | Web 端一键复制 URL |
-| 标签展示 | ✅ | 列表+详情均展示 |
-| 全文搜索 | ⏳ 下一迭代 | |
-| 知识库分组 | ⏳ 下一迭代 | |
-| 定时任务 Webhook | ⏳ 下一迭代 | |
-| 微信小程序通知 | ⏳ 下一迭代 | |
-| 数据库 | ⏳ 下一迭代 | |
+✅ 注册 → 登录 → JWT 校验
+✅ API Key 生成 → 列表（脱敏）→ 删除 → 失效
+✅ 用 API Key 发布 → 内容自动绑定 userId
+✅ 已登录用户看自己内容；未登录看公开
+✅ 删除内容时权限校验（403 防越权）
+✅ 改密码 → 旧密码失效
+✅ Skill 通过 `X-API-Key` 头认证发布
 
-## 关键设计决策
+## 路线图
 
-### 1. 前后端完全分离
-- **后端**: 只暴露 JSON API（含 `markdown` 原文 + `html` 渲染后的 HTML），不渲染页面模板
-- **前端**: React SPA 通过 fetch 调用 `/api/...`，自主渲染所有页面
-- **开发态**: Vite proxy `/api → http://localhost:3000` 解决跨域
-- **生产态**: 后端提供静态托管（待配置）或前端用 Nginx 反代
-
-### 2. 渲染在哪一侧？
-**后端**渲染 Markdown → HTML（marked + highlight.js），原因：
-- ✅ AI Agent 拿到 URL 即可访问，移动端优先样式即开即用
-- ✅ 前端拿到的是纯 HTML 字符串，`dangerouslySetInnerHTML` 直接渲染
-- ✅ SEO 友好（即使后端不渲染整页，HTML 片段也可被搜索引擎抓取）
-- ⚠️ 服务端有少量 CPU 开销（MVP 量级可接受）
-
-### 3. 实时渲染 vs 预渲染
-每次访问详情 API 时**实时**调用 `marked.parse()`：
-- ✅ 实现简单，无中间状态同步问题
-- ✅ 永远展示最新内容（如果用户修改源 MD）
-- ⚠️ 每次访问有少量 CPU 开销
-
-### 4. 文件系统 vs 数据库
-MVP 用文件系统，**符合 PRD 中"先不用数据库方式"的要求**：
-- `data/markdown/{slug}.md` 存原始 Markdown
-- `data/meta/{slug}.json` 存元数据（标题/标签/浏览数等）
-- ✅ 零依赖，`git` 可直接备份
-- 下一迭代再迁到 SQLite/PostgreSQL
-
-### 5. Mobile-First 单断点策略
-CSS 默认从移动端写起（<768px），@media 升级到 PC 端多栏宽版：
-- 字体 ≥16px、行高 ≥1.6
-- 图片 `max-width: 100%`
-- 代码块 `overflow-x: auto` 支持横向滑动
-- 表格 `display: block; overflow-x: auto` 移动端可滚动
-
-## 技术栈
-
-| 层 | 技术 |
-|---|---|
-| 前端框架 | React 18 |
-| 构建工具 | Vite 5 |
-| 路由 | React Router 6 |
-| 样式 | 原生 CSS（Mobile-First） |
-| 代码高亮 | highlight.js (GitHub 主题) |
-| Markdown 解析 | marked |
-| 后端框架 | Express 4 |
-| 跨域 | cors |
-| ID 生成 | nanoid |
-
-## 在 AI Agent 中接入
-
-### OpenClaw / WorkBuddy
-将 `md-beautify-skill/` 目录复制到 Agent 框架的 skills 目录中。框架读取 `skill.json` 中的 `triggers` 字段识别命令（如 "发布到 MD-Beautify"），调用 `index.js` 的 `execute('publish', {...})` 方法。
-
-### 通用 HTTP 调用
-任何能发起 HTTP 请求的工具都可以直接调用：
-```bash
-curl -X POST $API_BASE/api/publish -H "Content-Type: application/json" -d @content.json
-```
-
-## 路线图（按 PRD 规划）
-
-- **Phase 1.5**: 全文搜索、标签筛选、今日视图、知识库分组、定时任务 Webhook
-- **Phase 2**: 版本历史、自定义主题、嵌套分组、知识库整体分享
-- **Phase 3**: 团队空间、自定义域名、第二个 Agent 框架对接
+- [x] v0.1 MVP - 基础发布 / 渲染
+- [x] v0.2 前后端分离
+- [x] v0.3 用户系统 + 个人空间 + 产品落地页
+- [ ] v0.4 知识库分组 / 标签筛选
+- [ ] v0.5 微信小程序通知
+- [ ] v0.6 团队空间 / 协作
 
 ---
 
-基于 PRD v0.2 实现 · 2026-06-12 · v0.2 前后端分离重构
+基于 PRD v0.2 实现 · 2026-06-12 · v0.3 用户系统版

@@ -10,8 +10,12 @@ pnpm-debug.log*
 backend/data/
 **/data/markdown/*
 **/data/meta/*
+**/data/users/*
+**/data/keys/*
 !backend/data/markdown/.gitkeep
 !backend/data/meta/.gitkeep
+!backend/data/users/.gitkeep
+!backend/data/keys/.gitkeep
 
 # Frontend build output
 web/dist/

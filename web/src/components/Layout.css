@@ -41,19 +41,50 @@
 
 .nav {
   display: flex;
-  gap: 18px;
+  gap: 4px;
+  align-items: center;
 }
 .nav-link {
   color: rgba(255, 255, 255, 0.92);
   font-size: 14px;
   text-decoration: none;
-  padding: 4px 8px;
+  padding: 6px 12px;
   border-radius: 4px;
   transition: background 0.15s;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  font-family: inherit;
 }
 .nav-link:hover {
   background: rgba(255, 255, 255, 0.15);
   text-decoration: none;
+  color: #fff;
+}
+
+.nav-link-cta {
+  background: rgba(255, 255, 255, 0.2);
+  font-weight: 500;
+}
+.nav-link-cta:hover {
+  background: rgba(255, 255, 255, 0.3);
+}
+
+.user-dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #fff;
+  opacity: 0.9;
+}
+
+.nav-btn {
+  font-size: 13px;
+  opacity: 0.85;
 }
 
 .main {
@@ -79,6 +110,9 @@
   }
   .logo {
     font-size: 20px;
+  }
+  .nav-link {
+    padding: 6px 14px;
   }
   .footer {
     padding: 28px;

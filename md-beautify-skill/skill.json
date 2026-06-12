@@ -1,7 +1,7 @@
 {
   "name": "md-beautify",
-  "version": "0.1.0",
-  "description": "MD-Beautify · Markdown 一键发布与分享。将 AI 生成的 Markdown 实时渲染为 Mobile-First 的精美网页，返回可分享的短链接。",
+  "version": "0.3.0",
+  "description": "MD-Beautify · Markdown 一键发布与分享 v0.3（支持用户认证）。将 AI 生成的 Markdown 实时渲染为 Mobile-First 精美网页，返回可分享的短链接。",
   "author": "MD-Beautify Team",
   "license": "MIT",
   "platforms": [
@@ -20,19 +20,19 @@
   "config": {
     "apiBaseUrl": {
       "type": "string",
-      "default": "http://markdown-beautify.tinyapp.com.cn/",
+      "default": "http://localhost:3000",
       "description": "MD-Beautify 后端服务地址"
     },
     "apiKey": {
       "type": "string",
       "default": "",
-      "description": "API 认证密钥（MVP 阶段可不填）"
+      "description": "用户 API Key（在 Web 端设置页生成）。也可通过环境变量 MD_BEAUTIFY_API_KEY 传入，优先级更高。"
     }
   },
   "actions": [
     {
       "name": "publish",
-      "description": "将 Markdown 内容发布到 MD-Beautify，返回可分享的移动端优先渲染链接",
+      "description": "将 Markdown 内容发布到当前用户的 MD-Beautify 空间",
       "parameters": {
         "content": {
           "type": "string",
@@ -48,6 +48,11 @@
           "type": "array",
           "required": false,
           "description": "标签数组，例如 [\"NLP\", \"2026\"]"
+        },
+        "apiKey": {
+          "type": "string",
+          "required": false,
+          "description": "临时覆盖 API Key（高级用法）"
         }
       },
       "returns": {
