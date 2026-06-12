@@ -139,6 +139,102 @@ export default function HomePage() {
         </div>
       </section>
 
+      {/* ===== 安装 Skill ===== */}
+      <section className="section skill-install-section">
+        <div className="section-inner">
+          <h2 className="section-title">安装 Skill</h2>
+          <p className="section-subtitle">
+            开源 Skill 已发布到 GitHub，支持 <strong>OpenClaw / WorkBuddy / Claude Code / Cursor</strong> 等主流 Agent 框架。
+          </p>
+
+          <a
+            href="https://github.com/panhuachao/markdown-beautify/tree/main/md-beautify-skill"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="github-banner"
+          >
+            <div className="github-banner-left">
+              <svg className="github-icon" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0 0 24 12c0-6.63-5.37-12-12-12Z" />
+              </svg>
+              <div>
+                <div className="github-title">panhuachao/markdown-beautify</div>
+                <div className="github-path">
+                  <span className="github-folder">md-beautify-skill/</span>
+                </div>
+              </div>
+            </div>
+            <div className="github-banner-right">
+              <span className="github-action">在 GitHub 查看 →</span>
+            </div>
+          </a>
+
+          <div className="install-grid">
+            <div className="install-card">
+              <div className="install-card-header">
+                <div className="install-icon">📋</div>
+                <h3>方式 1：克隆仓库</h3>
+              </div>
+              <div className="code-block install-code">
+                <div className="code-label">terminal</div>
+                <pre>{`# 克隆整个项目
+git clone https://github.com/panhuachao/markdown-beautify.git
+cd markdown-beautify/md-beautify-skill
+
+# 将目录放到 Agent 的 skills 目录下
+cp -r md-beautify-skill ~/.openclaw/skills/
+# 或 ~/.workbuddy/skills/、~/.claude/skills/ 等`}</pre>
+              </div>
+            </div>
+
+            <div className="install-card">
+              <div className="install-card-header">
+                <div className="install-icon">📥</div>
+                <h3>方式 2：直接下载 ZIP</h3>
+              </div>
+              <p className="install-desc">
+                访问{' '}
+                <a
+                  href="https://github.com/panhuachao/markdown-beautify/tree/main/md-beautify-skill"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  GitHub 仓库
+                </a>
+                ，点击 <code>Code → Download ZIP</code>，解压后将 <code>md-beautify-skill/</code> 文件夹放入 Agent 的 skills 目录。
+              </p>
+            </div>
+
+            <div className="install-card">
+              <div className="install-card-header">
+                <div className="install-icon">⚙️</div>
+                <h3>方式 3：使用 GitHub 链接直接安装（推荐）</h3>
+              </div>
+              <p className="install-desc">
+                在 OpenClaw / WorkBuddy 等 Agent 中输入：
+              </p>
+              <div className="code-block install-code">
+                <div className="code-label">agent command</div>
+                <pre>{`# 让 Agent 帮你安装
+"请安装 Skill: https://github.com/panhuachao/markdown-beautify/tree/main/md-beautify-skill"
+
+# 或在配置中指定
+Skill 安装地址: https://github.com/panhuachao/markdown-beautify/tree/main/md-beautify-skill`}</pre>
+              </div>
+            </div>
+          </div>
+
+          <div className="install-tips">
+            <div className="install-tips-icon">💡</div>
+            <div>
+              <strong>安装后配置 API Key：</strong>
+              将你在 MD-Beautify 设置页生成的密钥配置为环境变量{' '}
+              <code>MD_BEAUTIFY_API_KEY</code>，或在 <code>skill.json</code> 的 <code>config.apiKey.default</code> 字段中填入。
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* ===== 接入方式 ===== */}
       <section className="section section-alt">
         <div className="section-inner">

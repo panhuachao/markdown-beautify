@@ -439,3 +439,218 @@
     max-width: 1100px;
   }
 }
+
+/* =============================================
+   安装 Skill 区块
+   ============================================= */
+
+.skill-install-section {
+  background: linear-gradient(180deg, #f8f9fa 0%, #fff 100%);
+}
+
+.section-subtitle {
+  text-align: center;
+  font-size: 15px;
+  color: #6a737d;
+  margin: -28px 0 32px;
+  line-height: 1.6;
+}
+.section-subtitle strong {
+  color: var(--color-primary);
+  font-weight: 600;
+}
+
+/* GitHub 仓库横幅 */
+.github-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: #1a1a1a;
+  color: #fff;
+  text-decoration: none;
+  border-radius: 12px;
+  padding: 18px 22px;
+  margin-bottom: 28px;
+  transition: all 0.2s;
+  gap: 16px;
+  flex-wrap: wrap;
+  border: 1px solid #2a2a2a;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+}
+.github-banner:hover {
+  background: #2a2a2a;
+  transform: translateY(-1px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+  text-decoration: none;
+  color: #fff;
+}
+.github-banner-left {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  min-width: 0;
+}
+.github-icon {
+  width: 36px;
+  height: 36px;
+  flex-shrink: 0;
+  color: #fff;
+}
+.github-title {
+  font-size: 15px;
+  font-weight: 600;
+  margin-bottom: 2px;
+  word-break: break-all;
+}
+.github-path {
+  font-family: SFMono-Regular, Consolas, monospace;
+  font-size: 12px;
+  color: #aaa;
+}
+.github-folder {
+  color: #79c0ff;
+}
+.github-banner-right {
+  flex-shrink: 0;
+}
+.github-action {
+  font-size: 14px;
+  font-weight: 500;
+  color: #fff;
+  background: var(--color-primary);
+  padding: 8px 16px;
+  border-radius: 6px;
+  transition: background 0.15s;
+}
+.github-banner:hover .github-action {
+  background: var(--color-primary-hover);
+}
+
+/* 安装方式卡片 */
+.install-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 14px;
+  margin-bottom: 24px;
+}
+
+.install-card {
+  background: #fff;
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+  padding: 18px 20px;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+.install-card:hover {
+  border-color: var(--color-primary);
+  box-shadow: 0 4px 16px rgba(255, 36, 66, 0.05);
+}
+
+.install-card-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.install-icon {
+  font-size: 22px;
+  line-height: 1;
+}
+
+.install-card-header h3 {
+  font-size: 15px;
+  font-weight: 600;
+  color: #1a1a1a;
+  margin: 0;
+}
+
+.install-desc {
+  font-size: 13px;
+  color: #4a5568;
+  line-height: 1.7;
+  margin: 0 0 8px;
+}
+.install-desc a {
+  color: var(--color-primary);
+  text-decoration: none;
+  font-weight: 500;
+}
+.install-desc a:hover {
+  text-decoration: underline;
+}
+.install-desc code {
+  background: #f6f8fa;
+  color: var(--color-code);
+  padding: 0.1em 0.4em;
+  border-radius: 3px;
+  font-family: SFMono-Regular, Consolas, monospace;
+  font-size: 0.9em;
+}
+
+.install-code {
+  margin-top: 8px;
+}
+.install-code pre {
+  font-size: 12px;
+  padding: 12px 14px;
+}
+
+/* 底部 Tips */
+.install-tips {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  background: linear-gradient(135deg, #fff8e1 0%, #fff3cd 100%);
+  border: 1px solid #ffe082;
+  border-radius: 10px;
+  padding: 14px 18px;
+  font-size: 13px;
+  color: #5d4037;
+  line-height: 1.7;
+}
+.install-tips-icon {
+  font-size: 22px;
+  line-height: 1;
+  flex-shrink: 0;
+}
+.install-tips strong {
+  color: #b07d00;
+}
+.install-tips code {
+  background: rgba(255, 255, 255, 0.7);
+  color: #c2185b;
+  padding: 0.1em 0.4em;
+  border-radius: 3px;
+  font-family: SFMono-Regular, Consolas, monospace;
+  font-size: 0.9em;
+}
+
+/* PC 端多列布局 */
+@media (min-width: 768px) {
+  .install-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .install-grid > .install-card:nth-child(3) {
+    grid-column: span 2;
+  }
+  .github-banner {
+    padding: 22px 28px;
+  }
+  .github-icon {
+    width: 42px;
+    height: 42px;
+  }
+  .github-title {
+    font-size: 17px;
+  }
+}
+
+@media (min-width: 1024px) {
+  .install-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+  .install-grid > .install-card:nth-child(3) {
+    grid-column: span 1;
+  }
+}

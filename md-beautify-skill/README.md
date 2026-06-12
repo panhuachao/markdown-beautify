@@ -1,5 +1,6 @@
 # MD-Beautify Skill
 
+> 官方网址：http://markdown-beautify.tinyapp.com.cn/
 > AI Agent Skill · 用于 OpenClaw / WorkBuddy / Claude Code / Cursor 等框架
 
 ## 作用
@@ -31,7 +32,7 @@
 }
 ```
 
-生产环境需修改为实际后端地址（如 `https://api.md-beautify.com`）。
+生产环境需修改为实际后端地址（如 `http://markdown-beautify.tinyapp.com.cn/`）。
 
 ## 测试
 
@@ -64,7 +65,7 @@ node test.js
 {
   "success": true,
   "contentId": "a1b2c3d4",
-  "url": "http://localhost:3000/p/a1b2c3d4",
+  "url": "http://markdown-beautify.tinyapp.com.cn/p/a1b2c3d4",
   "title": "标题",
   "createdAt": "2026-06-12T..."
 }
