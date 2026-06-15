@@ -6,16 +6,10 @@ yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
 
-# Backend runtime data (内容存储)
+# Backend runtime data (v0.4 后已切到 MySQL，不再使用文件系统)
+# 旧版可能遗留的目录
 backend/data/
-**/data/markdown/*
-**/data/meta/*
-**/data/users/*
-**/data/keys/*
-!backend/data/markdown/.gitkeep
-!backend/data/meta/.gitkeep
-!backend/data/users/.gitkeep
-!backend/data/keys/.gitkeep
+**/data/
 
 # Frontend build output
 web/dist/

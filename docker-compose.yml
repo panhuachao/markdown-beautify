@@ -17,10 +17,8 @@ services:
     restart: unless-stopped
     ports:
       - "5012:7001"
-    environment:
-      - NODE_ENV=production
-      - PORT=7001
-      - HOST=0.0.0.0
+    env_file:
+      - .env
     volumes:
       # 持久化数据（Markdown 文件 + 元数据）
       - ./data:/app/data

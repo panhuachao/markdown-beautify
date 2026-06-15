@@ -1,35 +1,25 @@
 /**
- * MD-Beautify Backend Server (v0.3 · 用户系统版)
+ * MD-Beautify Backend Server (v0.4 · MySQL 存储)
  *
- * 能力矩阵：
- *  公开 API:
- *    GET    /health
- *    POST   /api/auth/register      注册（邮箱+密码）
- *    POST   /api/auth/login         登录（返回 JWT）
- *    GET    /api/contents           列出当前用户内容（可选 ?all=1 看公开）
- *    GET    /api/contents/:slug     内容详情（含 HTML 渲染）
- *    POST   /api/publish            发布 Markdown（JWT 或 API Key 认证）
- *    DELETE /api/contents/:slug     删除自己的内容
- *    GET    /p/:slug                公开分享落地页（无需登录）
- *
- *  需登录 API (Bearer Token):
- *    GET    /api/auth/me            当前用户信息
- *    POST   /api/auth/change-password  修改密码
- *    GET    /api/keys               列出我的 API 密钥（不含明文）
- *    POST   /api/keys               生成新的 API 密钥（明文只返回一次）
- *    DELETE /api/keys/:id           删除密钥
- *    PATCH  /api/auth/me            更新昵称/头像
- *
- *  API Key 认证 (X-API-Key header):
- *    POST   /api/publish            AI Agent Skill 调用
+ * 变更:
+ *  - 存储层由文件系统 (data/users|keys|markdown) 切到 MySQL
+ *  - 启动前需执行 `node db/init.js` 创建表
+ *  - 业务接口签名保持完全兼容（前端 / Skill 不用改）
  *
  * 启动: node server.js (默认端口 3000)
  */
 
+// 优先加载 backend/.env（本地开发），其次回退到项目根 .env（docker compose 挂载）
+const dotenv = require('dotenv');
+const _envCandidates = [
+  require('path').join(__dirname, '.env'),
+  require('path').join(__dirname, '..', '.env')
+];
+const _envLoaded = _envCandidates.find((p) => require('fs').existsSync(p));
+if (_envLoaded) dotenv.config({ path: _envLoaded });
+
 const express = require('express');
 const path = require('path');
-const fs = require('fs');
-const fsp = require('fs').promises;
 const cors = require('cors');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
@@ -37,21 +27,15 @@ const { marked } = require('marked');
 const hljs = require('highlight.js');
 const { nanoid } = require('nanoid');
 
+// 存储驱动：默认 mysql，可通过 DB_DRIVER=sqlite 切换（本地无 MySQL 时）
+const DB_DRIVER = process.env.DB_DRIVER || 'mysql';
+const db = DB_DRIVER === 'sqlite' ? require('./db/sqlite-adapter') : require('./db');
+
 const app = express();
 const PORT = process.env.PORT || 7001;
 const HOST = process.env.HOST || '0.0.0.0';
 const JWT_SECRET = process.env.JWT_SECRET || 'md-beautify-dev-secret-change-in-prod';
-const JWT_EXPIRES_IN = '30d';
-
-const DATA_DIR = path.join(__dirname, 'data');
-const MD_DIR = path.join(DATA_DIR, 'markdown');
-const META_DIR = path.join(DATA_DIR, 'meta');
-const USERS_DIR = path.join(DATA_DIR, 'users');
-const KEYS_DIR = path.join(DATA_DIR, 'keys');
-
-[DATA_DIR, MD_DIR, META_DIR, USERS_DIR, KEYS_DIR].forEach((dir) => {
-  if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
-});
+const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '30d';
 
 // ---------- 中间件 ----------
 app.use(
@@ -86,82 +70,6 @@ marked.setOptions({
   }
 });
 
-// ---------- 数据访问层 ----------
-
-function readJSON(file) {
-  try {
-    return JSON.parse(fs.readFileSync(file, 'utf-8'));
-  } catch (e) {
-    return null;
-  }
-}
-
-function writeJSON(file, data) {
-  fs.writeFileSync(file, JSON.stringify(data, null, 2), 'utf-8');
-}
-
-function getUser(userId) {
-  return readJSON(path.join(USERS_DIR, `${userId}.json`));
-}
-
-function saveUser(user) {
-  writeJSON(path.join(USERS_DIR, `${user.id}.json`), user);
-}
-
-function findUserByEmail(email) {
-  if (!fs.existsSync(USERS_DIR)) return null;
-  const norm = String(email).toLowerCase().trim();
-  for (const file of fs.readdirSync(USERS_DIR)) {
-    const u = readJSON(path.join(USERS_DIR, file));
-    if (u && u.email === norm) return u;
-  }
-  return null;
-}
-
-function findUserByApiKey(apiKey) {
-  if (!fs.existsSync(KEYS_DIR)) return null;
-  // keys 以 userId-keyId.json 命名
-  for (const file of fs.readdirSync(KEYS_DIR)) {
-    const k = readJSON(path.join(KEYS_DIR, file));
-    if (k && k.keyHash && bcrypt.compareSync(apiKey, k.keyHash)) {
-      return { key: k, user: getUser(k.userId) };
-    }
-  }
-  return null;
-}
-
-function getMeta(slug) {
-  return readJSON(path.join(META_DIR, `${slug}.json`));
-}
-function saveMeta(slug, meta) {
-  writeJSON(path.join(META_DIR, `${slug}.json`), meta);
-}
-function listAllMeta() {
-  if (!fs.existsSync(META_DIR)) return [];
-  return fs
-    .readdirSync(META_DIR)
-    .filter((f) => f.endsWith('.json'))
-    .map((f) => readJSON(path.join(META_DIR, f)))
-    .filter(Boolean)
-    .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
-}
-function listUserMeta(userId) {
-  return listAllMeta().filter((m) => m.userId === userId);
-}
-function listUserKeys(userId) {
-  if (!fs.existsSync(KEYS_DIR)) return [];
-  return fs
-    .readdirSync(KEYS_DIR)
-    .filter((f) => f.startsWith(`${userId}-`) && f.endsWith('.json'))
-    .map((f) => readJSON(path.join(KEYS_DIR, f)))
-    .filter(Boolean)
-    .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
-}
-function deleteUserKey(userId, keyId) {
-  const p = path.join(KEYS_DIR, `${userId}-${keyId}.json`);
-  if (fs.existsSync(p)) fs.unlinkSync(p);
-}
-
 // ---------- 工具函数 ----------
 
 function extractTitle(markdown, fallback) {
@@ -186,59 +94,81 @@ function publicUser(user) {
   const { passwordHash, ...rest } = user;
   return rest;
 }
+function isValidEmail(email) {
+  return typeof email === 'string' && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+}
 
 // ---------- 认证中间件 ----------
-// 优先尝试 JWT (Authorization: Bearer ...)，再尝试 API Key (X-API-Key: ...)
-// 任一成功即通过，req.user 会被填充
-
-function authMiddleware(req, res, next) {
+async function authMiddleware(req, res, next) {
   req.user = null;
 
+  // 1) JWT
   const auth = req.headers.authorization || '';
   if (auth.startsWith('Bearer ')) {
     const token = auth.slice(7);
     try {
       const payload = jwt.verify(token, JWT_SECRET);
-      const u = getUser(payload.sub);
+      const u = await db.Users.findById(payload.sub);
       if (u) req.user = u;
     } catch (e) {
       // token 无效，继续尝试 API Key
     }
   }
 
+  // 2) API Key
   if (!req.user) {
     const apiKey = req.headers['x-api-key'];
     if (apiKey) {
-      const found = findUserByApiKey(apiKey);
-      if (found) req.user = found.user;
+      const keyRecord = await db.ApiKeys.findByPlainKey(apiKey);
+      if (keyRecord) {
+        const u = await db.Users.findById(keyRecord.userId);
+        if (u) {
+          req.user = u;
+          // 异步 touchLastUsed 不阻塞
+          db.ApiKeys.touchLastUsed(u.id, keyRecord.id).catch(() => {});
+        }
+      }
     }
   }
 
   next();
 }
 
-// 要求登录（401）
 function requireAuth(req, res, next) {
   if (!req.user) return res.status(401).json({ success: false, error: '未登录或认证失败' });
   next();
 }
 
-// 邮箱格式校验
-function isValidEmail(email) {
-  return typeof email === 'string' && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+// ============================================================
+//              前端静态文件托管（SPA）
+// ============================================================
+
+const WEB_DIST = path.join(__dirname, '..', 'web', 'dist');
+if (require('fs').existsSync(WEB_DIST)) {
+  // 托管前端构建产物
+  app.use(express.static(WEB_DIST));
+  // SPA fallback：所有非 API 路由返回 index.html
+  app.get('*', (req, res) => {
+    if (req.path.startsWith('/api/') || req.path.startsWith('/health')) {
+      return res.status(404).json({ error: 'Not Found' });
+    }
+    res.sendFile(path.join(WEB_DIST, 'index.html'));
+  });
+  console.log(`[startup] 📦 前端静态文件已挂载: ${WEB_DIST}`);
+} else {
+  console.log(`[startup] ⚠️  前端构建产物不存在 (${WEB_DIST})，仅提供 API`);
 }
 
 // ============================================================
-//                       API 路由
+//                       基础路由
 // ============================================================
 
-// ---------- 健康 ----------
 app.get('/health', (req, res) => {
   res.json({ status: 'ok', uptime: process.uptime(), timestamp: new Date().toISOString() });
 });
 
-// 应用认证中间件到 /api/*
 app.use('/api', authMiddleware);
+
 
 // ============================================================
 //                      认证 API
@@ -246,7 +176,6 @@ app.use('/api', authMiddleware);
 
 /**
  * POST /api/auth/register
- * body: { email, password, nickname? }
  */
 app.post('/api/auth/register', async (req, res) => {
   const { email, password, nickname } = req.body || {};
@@ -256,20 +185,19 @@ app.post('/api/auth/register', async (req, res) => {
   if (!password || String(password).length < 6) {
     return res.status(400).json({ success: false, error: '密码至少 6 位' });
   }
-  if (findUserByEmail(email)) {
+
+  const exists = await db.Users.findByEmail(email.toLowerCase().trim());
+  if (exists) {
     return res.status(409).json({ success: false, error: '该邮箱已注册' });
   }
 
-  const id = nanoid(10);
-  const user = {
-    id,
+  const user = await db.Users.create({
+    id: nanoid(10),
     email: email.toLowerCase().trim(),
     nickname: (nickname && String(nickname).trim()) || email.split('@')[0],
     avatar: '',
-    passwordHash: bcrypt.hashSync(password, 10),
-    createdAt: new Date().toISOString()
-  };
-  saveUser(user);
+    passwordHash: bcrypt.hashSync(password, 10)
+  });
 
   const token = signToken(user);
   res.json({ success: true, token, user: publicUser(user) });
@@ -277,14 +205,13 @@ app.post('/api/auth/register', async (req, res) => {
 
 /**
  * POST /api/auth/login
- * body: { email, password }
  */
-app.post('/api/auth/login', (req, res) => {
+app.post('/api/auth/login', async (req, res) => {
   const { email, password } = req.body || {};
   if (!email || !password) {
     return res.status(400).json({ success: false, error: '邮箱和密码必填' });
   }
-  const user = findUserByEmail(email);
+  const user = await db.Users.findByEmail(String(email).toLowerCase().trim());
   if (!user || !bcrypt.compareSync(password, user.passwordHash)) {
     return res.status(401).json({ success: false, error: '邮箱或密码错误' });
   }
@@ -293,34 +220,32 @@ app.post('/api/auth/login', (req, res) => {
 });
 
 /**
- * GET /api/auth/me  (需登录)
+ * GET /api/auth/me
  */
 app.get('/api/auth/me', requireAuth, (req, res) => {
   res.json({ success: true, user: publicUser(req.user) });
 });
 
 /**
- * PATCH /api/auth/me  (需登录)
- * body: { nickname?, avatar? }
+ * PATCH /api/auth/me
  */
-app.patch('/api/auth/me', requireAuth, (req, res) => {
+app.patch('/api/auth/me', requireAuth, async (req, res) => {
   const { nickname, avatar } = req.body || {};
+  const patch = {};
   if (typeof nickname === 'string' && nickname.trim()) {
-    req.user.nickname = nickname.trim().slice(0, 32);
+    patch.nickname = nickname.trim().slice(0, 32);
   }
   if (typeof avatar === 'string') {
-    req.user.avatar = avatar.slice(0, 500);
+    patch.avatar = avatar.slice(0, 500);
   }
-  req.user.updatedAt = new Date().toISOString();
-  saveUser(req.user);
-  res.json({ success: true, user: publicUser(req.user) });
+  const updated = await db.Users.update(req.user.id, patch);
+  res.json({ success: true, user: publicUser(updated) });
 });
 
 /**
- * POST /api/auth/change-password  (需登录)
- * body: { oldPassword, newPassword }
+ * POST /api/auth/change-password
  */
-app.post('/api/auth/change-password', requireAuth, (req, res) => {
+app.post('/api/auth/change-password', requireAuth, async (req, res) => {
   const { oldPassword, newPassword } = req.body || {};
   if (!oldPassword || !newPassword) {
     return res.status(400).json({ success: false, error: '旧密码和新密码必填' });
@@ -331,9 +256,7 @@ app.post('/api/auth/change-password', requireAuth, (req, res) => {
   if (!bcrypt.compareSync(oldPassword, req.user.passwordHash)) {
     return res.status(401).json({ success: false, error: '旧密码错误' });
   }
-  req.user.passwordHash = bcrypt.hashSync(newPassword, 10);
-  req.user.updatedAt = new Date().toISOString();
-  saveUser(req.user);
+  await db.Users.updatePassword(req.user.id, bcrypt.hashSync(newPassword, 10));
   res.json({ success: true, message: '密码已更新' });
 });
 
@@ -341,57 +264,46 @@ app.post('/api/auth/change-password', requireAuth, (req, res) => {
 //                     API 密钥管理
 // ============================================================
 
-/**
- * GET /api/keys  (需登录)
- * 返回当前用户的所有 API 密钥（不含明文）
- */
-app.get('/api/keys', requireAuth, (req, res) => {
-  const keys = listUserKeys(req.user.id).map((k) => ({
-    id: k.id,
-    name: k.name,
-    prefix: k.prefix, // 脱敏前缀
-    createdAt: k.createdAt,
-    lastUsedAt: k.lastUsedAt
-  }));
-  res.json({ success: true, total: keys.length, items: keys });
+app.get('/api/keys', requireAuth, async (req, res) => {
+  const keys = await db.ApiKeys.listByUser(req.user.id);
+  res.json({
+    success: true,
+    total: keys.length,
+    items: keys.map((k) => ({
+      id: k.id,
+      name: k.name,
+      prefix: k.prefix,
+      createdAt: k.createdAt,
+      lastUsedAt: k.lastUsedAt
+    }))
+  });
 });
 
-/**
- * POST /api/keys  (需登录)
- * body: { name }
- * 返回明文 API Key（仅此一次！）
- */
-app.post('/api/keys', requireAuth, (req, res) => {
+app.post('/api/keys', requireAuth, async (req, res) => {
   const name = (req.body && req.body.name && String(req.body.name).trim()) || 'Unnamed Key';
   const plain = 'md_' + nanoid(32);
   const id = nanoid(8);
-  const keyRecord = {
+  const keyRecord = await db.ApiKeys.create({
     id,
     userId: req.user.id,
     name: name.slice(0, 50),
-    prefix: plain.slice(0, 8) + '…', // 脱敏
-    keyHash: bcrypt.hashSync(plain, 10),
-    createdAt: new Date().toISOString(),
-    lastUsedAt: null
-  };
-  writeJSON(path.join(KEYS_DIR, `${req.user.id}-${id}.json`), keyRecord);
+    prefix: plain.slice(0, 8) + '…',
+    keyHash: bcrypt.hashSync(plain, 10)
+  });
   res.json({
     success: true,
     key: {
-      id,
+      id: keyRecord.id,
       name: keyRecord.name,
-      key: plain, // 仅此一次返回明文
+      key: plain, // 仅此一次
       prefix: keyRecord.prefix,
       createdAt: keyRecord.createdAt
     }
   });
 });
 
-/**
- * DELETE /api/keys/:id  (需登录)
- */
-app.delete('/api/keys/:id', requireAuth, (req, res) => {
-  deleteUserKey(req.user.id, req.params.id);
+app.delete('/api/keys/:id', requireAuth, async (req, res) => {
+  await db.ApiKeys.delete(req.user.id, req.params.id);
   res.json({ success: true, message: '已删除' });
 });
 
@@ -401,17 +313,16 @@ app.delete('/api/keys/:id', requireAuth, (req, res) => {
 
 /**
  * GET /api/contents
- * - 已登录：默认仅看自己的内容，?all=1 看公开内容
- * - 未登录：可看公开内容（userId 为 null 的历史数据）
+ *   - 已登录：默认仅看自己的内容，?all=1 看公开
+ *   - 未登录：?all=1 看公开
  */
-app.get('/api/contents', (req, res) => {
+app.get('/api/contents', async (req, res) => {
   const all = req.query.all === '1';
   let items;
   if (req.user && !all) {
-    items = listUserMeta(req.user.id);
+    items = await db.Contents.list({ userId: req.user.id });
   } else {
-    // 公开内容 = 无 userId 字段的（兼容旧数据） 或显式 public
-    items = listAllMeta().filter((m) => !m.userId);
+    items = await db.Contents.list({ publicOnly: true });
   }
   const baseUrl = `${req.protocol}://${req.get('host')}`;
   res.json({
@@ -431,51 +342,29 @@ app.get('/api/contents', (req, res) => {
 });
 
 /**
- * GET /api/contents/:slug  公开访问（无需登录），浏览数 +1
+ * GET /api/contents/:slug
  */
 app.get('/api/contents/:slug', async (req, res) => {
-  const { slug } = req.params;
-  const meta = getMeta(slug);
+  const meta = await db.Contents.findBySlug(req.params.slug);
   if (!meta) return res.status(404).json({ success: false, error: '内容不存在' });
-  const mdPath = path.join(MD_DIR, `${slug}.md`);
-  if (!fs.existsSync(mdPath)) {
-    return res.status(404).json({ success: false, error: '内容文件不存在' });
-  }
-  const markdown = await fsp.readFile(mdPath, 'utf-8');
-  const html = marked.parse(markdown);
 
-  // 浏览数 +1
-  meta.viewCount = (meta.viewCount || 0) + 1;
-  saveMeta(slug, meta);
-
-  // 如果是 API Key 访问，更新 lastUsedAt
-  if (req.user) {
-    const auth = req.headers.authorization || '';
-    if (!auth.startsWith('Bearer ')) {
-      const apiKey = req.headers['x-api-key'];
-      if (apiKey) {
-        // 找到对应 key 记录
-        const found = findUserByApiKey(apiKey);
-        if (found) {
-          found.key.lastUsedAt = new Date().toISOString();
-          writeJSON(
-            path.join(KEYS_DIR, `${found.user.id}-${found.key.id}.json`),
-            found.key
-          );
-        }
-      }
-    }
-  }
+  await db.Contents.incrementView(meta.slug);
+  const html = marked.parse(meta.markdown);
+  // viewCount 已经 +1，但 findBySlug 返回的是旧值
+  meta.viewCount += 1;
 
   res.json({
     success: true,
-    data: { ...meta, markdown, html, url: `${req.protocol}://${req.get('host')}/p/${slug}` }
+    data: {
+      ...meta,
+      html,
+      url: `${req.protocol}://${req.get('host')}/p/${meta.slug}`
+    }
   });
 });
 
 /**
- * POST /api/publish  发布 Markdown
- * 认证：JWT Bearer 或 X-API-Key，任一即可
+ * POST /api/publish
  */
 app.post('/api/publish', async (req, res) => {
   try {
@@ -493,26 +382,21 @@ app.post('/api/publish', async (req, res) => {
     const baseUrl = `${req.protocol}://${req.get('host')}`;
     const now = new Date().toISOString();
 
-    await fsp.writeFile(path.join(MD_DIR, `${slug}.md`), content, 'utf-8');
-
-    const meta = {
+    const meta = await db.Contents.create({
       slug,
-      userId: req.user.id, // 关联到用户
+      userId: req.user.id,
       title: finalTitle,
       excerpt,
+      markdown: content,
       tags: Array.isArray(tags) ? tags : [],
-      createdAt: now,
-      updatedAt: now,
-      viewCount: 0,
       source: 'agent'
-    };
-    saveMeta(slug, meta);
+    });
 
     const url = `${baseUrl}/p/${slug}`;
     console.log(
       `[publish] user=${req.user.email} slug=${slug} title="${finalTitle}" tags=${JSON.stringify(tags || [])}`
     );
-    res.json({ success: true, contentId: slug, slug, title: finalTitle, url, createdAt: now });
+    res.json({ success: true, contentId: slug, slug, title: finalTitle, url, createdAt: meta.createdAt });
   } catch (err) {
     console.error('[publish] error:', err);
     res.status(500).json({ success: false, error: err.message });
@@ -520,51 +404,85 @@ app.post('/api/publish', async (req, res) => {
 });
 
 /**
- * DELETE /api/contents/:slug  (需登录且是本人内容)
+ * DELETE /api/contents/:slug
  */
-app.delete('/api/contents/:slug', requireAuth, (req, res) => {
-  const { slug } = req.params;
-  const meta = getMeta(slug);
+app.delete('/api/contents/:slug', requireAuth, async (req, res) => {
+  const meta = await db.Contents.findBySlug(req.params.slug);
   if (!meta) return res.status(404).json({ success: false, error: '内容不存在' });
   if (meta.userId && meta.userId !== req.user.id) {
     return res.status(403).json({ success: false, error: '无权删除他人内容' });
   }
-  const mdPath = path.join(MD_DIR, `${slug}.md`);
-  const metaPath = path.join(META_DIR, `${slug}.json`);
-  if (fs.existsSync(mdPath)) fs.unlinkSync(mdPath);
-  if (fs.existsSync(metaPath)) fs.unlinkSync(metaPath);
+  await db.Contents.delete(req.params.slug);
   res.json({ success: true, message: '已删除' });
 });
-
-// ============================================================
-//               旧数据兼容：把匿名内容标记为"公开"
-// ============================================================
-// 已有 meta 没有 userId 字段 → 视为"历史匿名内容"，所有人可查看
-// 通过 GET /api/contents?all=1 看
 
 // ============================================================
 //                       启动
 // ============================================================
 
-app.listen(PORT, HOST, () => {
-  console.log(`\n🚀 MD-Beautify API Server v0.3 (用户系统)`);
-  console.log(`   Local:   http://localhost:${PORT}`);
-  console.log(`   Network: http://${HOST}:${PORT}`);
-  console.log(`\n📖 公开 API:`);
-  console.log(`   POST   /api/auth/register        注册`);
-  console.log(`   POST   /api/auth/login           登录`);
-  console.log(`   GET    /api/contents             列出内容`);
-  console.log(`   GET    /api/contents/:slug       内容详情`);
-  console.log(`   POST   /api/publish              发布（需认证）`);
-  console.log(`   GET    /health                   健康检查`);
-  console.log(`\n🔐 需登录 API (Bearer Token):`);
-  console.log(`   GET    /api/auth/me              当前用户`);
-  console.log(`   PATCH  /api/auth/me              更新资料`);
-  console.log(`   POST   /api/auth/change-password 修改密码`);
-  console.log(`   GET    /api/keys                 我的 API 密钥`);
-  console.log(`   POST   /api/keys                 生成 API 密钥`);
-  console.log(`   DELETE /api/keys/:id             删除 API 密钥`);
-  console.log(`   DELETE /api/contents/:slug       删除我的内容`);
-  console.log(`\n🔑 API Key 认证 (X-API-Key header):`);
-  console.log(`   POST   /api/publish              AI Agent Skill 调用\n`);
+async function start() {
+  try {
+    // 启动时检查数据库连通性
+    if (DB_DRIVER === 'mysql') {
+      const pool = db.getPool();
+      const conn = await pool.getConnection();
+      await conn.ping();
+      conn.release();
+      console.log(`[startup] ✅ MySQL 已连接 (${process.env.DB_HOST}:${process.env.DB_PORT})`);
+    } else {
+      // sqlite 适配器在第一次查询时建表
+      db.getDb();
+      console.log(`[startup] ✅ SQLite dev DB 已就绪（仅供本地开发/测试）`);
+    }
+  } catch (err) {
+    console.error('[startup] ❌ 数据库连接失败:', err.message);
+    if (DB_DRIVER === 'mysql') {
+      console.error('[startup] 请先执行: node db/init.js');
+    }
+    process.exit(1);
+  }
+
+  app.listen(PORT, HOST, () => {
+    console.log(`\n🚀 MD-Beautify API Server v0.4 (driver: ${DB_DRIVER})`);
+    console.log(`   Local:   http://localhost:${PORT}`);
+    console.log(`   Network: http://${HOST}:${PORT}`);
+    console.log(`\n📖 公开 API:`);
+    console.log(`   POST   /api/auth/register        注册`);
+    console.log(`   POST   /api/auth/login           登录`);
+    console.log(`   GET    /api/contents             列出内容`);
+    console.log(`   GET    /api/contents/:slug       内容详情`);
+    console.log(`   POST   /api/publish              发布（需认证）`);
+    console.log(`   GET    /health                   健康检查`);
+    console.log(`\n🔐 需登录 API (Bearer Token):`);
+    console.log(`   GET    /api/auth/me              当前用户`);
+    console.log(`   PATCH  /api/auth/me              更新资料`);
+    console.log(`   POST   /api/auth/change-password 修改密码`);
+    console.log(`   GET    /api/keys                 我的 API 密钥`);
+    console.log(`   POST   /api/keys                 生成 API 密钥`);
+    console.log(`   DELETE /api/keys/:id             删除 API 密钥`);
+    console.log(`   DELETE /api/contents/:slug       删除我的内容`);
+    console.log(`\n🔑 API Key 认证 (X-API-Key header):`);
+    console.log(`   POST   /api/publish              AI Agent Skill 调用\n`);
+  });
+}
+
+// 优雅退出
+process.on('SIGINT', async () => {
+  console.log('\n[shutdown] closing pool...');
+  if (DB_DRIVER === 'mysql') {
+    await db.closePool();
+  } else {
+    db.closeDb();
+  }
+  process.exit(0);
 });
+process.on('SIGTERM', async () => {
+  if (DB_DRIVER === 'mysql') {
+    await db.closePool();
+  } else {
+    db.closeDb();
+  }
+  process.exit(0);
+});
+
+start();

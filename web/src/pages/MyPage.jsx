@@ -30,7 +30,7 @@ function formatDate(iso) {
 export default function MyPage() {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
-  const { isLoggedIn, user } = useAuth();
+  const { isLoggedIn, loading: authLoading, user } = useAuth();
 
   const initialTab = searchParams.get('tab') === 'all' ? 'all' : 'today';
   const [activeTab, setActiveTab] = useState(initialTab);
@@ -40,12 +40,14 @@ export default function MyPage() {
   const [error, setError] = useState(null);
   const [showUpload, setShowUpload] = useState(false);
 
-  // 登录保护
+  // 登录保护：等待 authLoading 完成后才做判断
   useEffect(() => {
+    if (authLoading) return;
     if (!isLoggedIn) {
       navigate('/login', { state: { from: '/my' } });
     }
-  }, [isLoggedIn, navigate]);
+  }, [isLoggedIn, authLoading, navigate]);
+
 
   // 加载内容
   useEffect(() => {

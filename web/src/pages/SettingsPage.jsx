@@ -13,7 +13,8 @@ function formatDate(iso) {
 
 export default function SettingsPage() {
   const navigate = useNavigate();
-  const { user, isLoggedIn, updateProfile, logout } = useAuth();
+  const { user, isLoggedIn, loading: authLoading, updateProfile, logout } = useAuth();
+
 
   // 资料
   const [nickname, setNickname] = useState(user?.nickname || '');
@@ -35,12 +36,14 @@ export default function SettingsPage() {
   const [copiedKey, setCopiedKey] = useState(false);
 
   useEffect(() => {
+    if (authLoading) return;
     if (!isLoggedIn) {
       navigate('/login', { state: { from: '/settings' } });
       return;
     }
     loadKeys();
-  }, [isLoggedIn, navigate]);
+  }, [isLoggedIn, authLoading, navigate]);
+
 
   const loadKeys = async () => {
     try {

@@ -370,6 +370,8 @@
   line-height: 1.6;
   overflow-x: auto;
   white-space: pre;
+  width: 100%;
+  overflow-x: auto;
 }
 
 /* ===== CTA ===== */
@@ -540,6 +542,7 @@
   border-radius: 12px;
   padding: 18px 20px;
   transition: border-color 0.15s, box-shadow 0.15s;
+  min-width: 0;
 }
 .install-card:hover {
   border-color: var(--color-primary);
@@ -629,10 +632,7 @@
 /* PC 端多列布局 */
 @media (min-width: 768px) {
   .install-grid {
-    grid-template-columns: repeat(2, 1fr);
-  }
-  .install-grid > .install-card:nth-child(3) {
-    grid-column: span 2;
+    grid-template-columns: repeat(3, 1fr);
   }
   .github-banner {
     padding: 22px 28px;
@@ -646,11 +646,3 @@
   }
 }
 
-@media (min-width: 1024px) {
-  .install-grid {
-    grid-template-columns: repeat(3, 1fr);
-  }
-  .install-grid > .install-card:nth-child(3) {
-    grid-column: span 1;
-  }
-}
