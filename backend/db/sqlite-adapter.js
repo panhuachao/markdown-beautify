@@ -34,6 +34,7 @@ CREATE TABLE IF NOT EXISTS contents (
   view_count INTEGER NOT NULL DEFAULT 0,
   source TEXT NOT NULL DEFAULT 'agent',
   status TEXT NOT NULL DEFAULT 'published',
+  shared INTEGER NOT NULL DEFAULT 0,
   created_at TEXT NOT NULL,
   updated_at TEXT NOT NULL
 );
@@ -68,13 +69,22 @@ function closeDb() {
 
 function toISO(s) {
   if (!s) return null;
-  // 已是带 Z/+xx:xx 的 ISO 字符串，直接转
+  let date;
   if (typeof s === 'string' && /Z$|[+-]\d{2}:?\d{2}$/.test(s)) {
-    return new Date(s).toISOString();
+    date = new Date(s);
+  } else {
+    // SQLite datetime('now') 返回 "YYYY-MM-DD HH:MM:SS"（无时区），
+    // 当作 UTC 处理
+    date = new Date(String(s).replace(' ', 'T') + 'Z');
   }
-  // SQLite datetime('now') 返回 "YYYY-MM-DD HH:MM:SS"（无时区），
-  // 当作 UTC 处理再转 ISO
-  return new Date(String(s).replace(' ', 'T') + 'Z').toISOString();
+  // 转换为东八区时间并返回带时区偏移的 ISO 字符串
+  const offset = 8 * 60; // 东八区分钟偏移
+  const local = new Date(date.getTime() + offset * 60 * 1000);
+  const iso = local.toISOString().replace('Z', '');
+  const sign = '+';
+  const hours = String(Math.floor(Math.abs(offset) / 60)).padStart(2, '0');
+  const minutes = String(Math.abs(offset) % 60).padStart(2, '0');
+  return iso + sign + hours + ':' + minutes;
 }
 
 const Users = {
@@ -132,14 +142,14 @@ const Users = {
 };
 
 const Contents = {
-  async create({ slug, userId, title, excerpt, markdown, tags, source = 'agent' }) {
+  async create({ slug, userId, title, excerpt, markdown, tags, source = 'agent', shared = false }) {
     const now = new Date().toISOString();
     getDb()
       .prepare(
-        `INSERT INTO contents (slug, user_id, title, excerpt, markdown, tags_json, source, created_at, updated_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
+        `INSERT INTO contents (slug, user_id, title, excerpt, markdown, tags_json, source, shared, created_at, updated_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
       )
-      .run(slug, userId || null, title, excerpt || '', markdown, JSON.stringify(tags || []), source, now, now);
+      .run(slug, userId || null, title, excerpt || '', markdown, JSON.stringify(tags || []), source, shared ? 1 : 0, now, now);
     return this.findBySlug(slug);
   },
   async findBySlug(slug) {
@@ -155,6 +165,7 @@ const Contents = {
       viewCount: r.view_count || 0,
       source: r.source,
       status: r.status,
+      shared: !!r.shared,
       createdAt: toISO(r.created_at),
       updatedAt: toISO(r.updated_at)
     };
@@ -168,7 +179,7 @@ const Contents = {
       params.push(userId);
     }
     if (publicOnly) {
-      where.push('user_id IS NULL');
+      where.push('shared = 1');
     }
     if (since) {
       where.push('created_at >= ?');
@@ -211,6 +222,11 @@ const Contents = {
     getDb()
       .prepare('UPDATE contents SET view_count = view_count + 1 WHERE slug = ?')
       .run(slug);
+  },
+  async updateShared(slug, shared) {
+    getDb()
+      .prepare('UPDATE contents SET shared = ? WHERE slug = ?')
+      .run(shared ? 1 : 0, slug);
   },
   async delete(slug) {
     const r = getDb().prepare('DELETE FROM contents WHERE slug = ?').run(slug);

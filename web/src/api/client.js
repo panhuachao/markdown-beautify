@@ -93,6 +93,12 @@ export const api = {
       body: JSON.stringify({ content, title, tags })
     });
   },
+  updateContent(slug, payload) {
+    return request(`/contents/${slug}`, {
+      method: 'PATCH',
+      body: JSON.stringify(payload)
+    });
+  },
   deleteContent(slug) {
     return request(`/contents/${slug}`, { method: 'DELETE' });
   },

@@ -356,6 +356,126 @@
   .markdown-body pre { padding: 18px 22px; }
 }
 
+/* ========== 分享弹层 ========== */
+.share-modal-mask {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.55);
+  z-index: 1000;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  animation: maskIn 0.2s ease;
+}
+
+.share-modal {
+  background: #fff;
+  width: 100%;
+  max-width: 480px;
+  max-height: 85vh;
+  border-radius: 16px 16px 0 0;
+  display: flex;
+  flex-direction: column;
+  animation: slideUp 0.25s ease;
+}
+
+.share-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 18px;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.share-modal-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: #1a1a1a;
+  margin: 0;
+}
+
+.share-modal-close {
+  background: transparent;
+  border: none;
+  font-size: 20px;
+  color: #6a737d;
+  padding: 4px 8px;
+  border-radius: 4px;
+  cursor: pointer;
+}
+.share-modal-close:hover {
+  background: #f0f0f0;
+}
+
+.share-modal-body {
+  flex: 1;
+  overflow: auto;
+  padding: 18px;
+}
+
+.share-section {
+  margin-bottom: 18px;
+}
+
+.share-label {
+  display: block;
+  font-size: 13px;
+  font-weight: 600;
+  color: #2c3e50;
+  margin-bottom: 8px;
+}
+
+.share-url-row {
+  display: flex;
+  gap: 8px;
+}
+
+.share-url-input {
+  flex: 1;
+  padding: 8px 12px;
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  font-size: 13px;
+  color: #2c3e50;
+  background: #f6f8fa;
+  outline: none;
+  cursor: text;
+  font-family: inherit;
+}
+.share-url-input:focus {
+  border-color: var(--color-primary);
+  background: #fff;
+}
+
+.share-copy-btn {
+  padding: 8px 16px;
+  border-radius: 6px;
+  border: none;
+  background: var(--color-primary);
+  color: #fff;
+  font-size: 13px;
+  cursor: pointer;
+  white-space: nowrap;
+  font-family: inherit;
+  transition: background 0.15s;
+}
+.share-copy-btn:hover {
+  opacity: 0.9;
+}
+.share-copy-btn.is-success {
+  background: #28a745;
+}
+
+@media (min-width: 768px) {
+  .share-modal-mask {
+    align-items: center;
+  }
+  .share-modal {
+    border-radius: 12px;
+    max-height: 80vh;
+  }
+}
+
 @media (min-width: 1200px) {
   .content-page .container {
     max-width: 1024px;

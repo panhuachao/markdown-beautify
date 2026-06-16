@@ -21,7 +21,7 @@ function getPool() {
     connectionLimit: parseInt(process.env.DB_CONNECTION_LIMIT || '10', 10),
     queueLimit: 0,
     charset: 'utf8mb4',
-    timezone: 'Z',
+    timezone: '+08:00',
     // 关键：把 JSON 列解析为对象
     // 注意：field.string() 默认用 latin1 编码，必须传 'utf8' 否则中文乱码
     typeCast: function (field, next) {
@@ -83,6 +83,7 @@ function rowToContent(r) {
     viewCount: r.view_count || 0,
     source: r.source,
     status: r.status,
+    shared: !!r.shared, // 0/1 → boolean
     createdAt: toISO(r.created_at),
     updatedAt: toISO(r.updated_at)
   };
@@ -103,8 +104,15 @@ function rowToKey(r) {
 
 function toISO(d) {
   if (!d) return null;
-  if (d instanceof Date) return d.toISOString();
-  return new Date(d).toISOString();
+  const date = d instanceof Date ? d : new Date(d);
+  // 转换为东八区时间并返回带时区偏移的 ISO 字符串
+  const offset = 8 * 60; // 东八区分钟偏移
+  const local = new Date(date.getTime() + offset * 60 * 1000);
+  const iso = local.toISOString().replace('Z', '');
+  const sign = '+';
+  const hours = String(Math.floor(Math.abs(offset) / 60)).padStart(2, '0');
+  const minutes = String(Math.abs(offset) % 60).padStart(2, '0');
+  return iso + sign + hours + ':' + minutes;
 }
 
 // ============================================================
@@ -168,10 +176,10 @@ const Users = {
 // ============================================================
 
 const Contents = {
-  async create({ slug, userId, title, excerpt, markdown, tags, source = 'agent' }) {
+  async create({ slug, userId, title, excerpt, markdown, tags, source = 'agent', shared = false }) {
     const sql = `INSERT INTO contents
-                 (slug, user_id, title, excerpt, markdown, tags_json, source)
-                 VALUES (?, ?, ?, ?, ?, ?, ?)`;
+                 (slug, user_id, title, excerpt, markdown, tags_json, source, shared)
+                 VALUES (?, ?, ?, ?, ?, ?, ?, ?)`;
     await getPool().execute(sql, [
       slug,
       userId || null,
@@ -179,7 +187,8 @@ const Contents = {
       excerpt || '',
       markdown,
       JSON.stringify(tags || []),
-      source
+      source,
+      shared ? 1 : 0
     ]);
     return this.findBySlug(slug);
   },
@@ -208,7 +217,7 @@ const Contents = {
       params.push(userId);
     }
     if (publicOnly) {
-      where.push('user_id IS NULL');
+      where.push('shared = 1');
     }
     if (since) {
       where.push('created_at >= ?');
@@ -248,6 +257,13 @@ const Contents = {
     await getPool().execute(
       'UPDATE contents SET view_count = view_count + 1 WHERE slug = ?',
       [slug]
+    );
+  },
+
+  async updateShared(slug, shared) {
+    await getPool().execute(
+      'UPDATE contents SET shared = ? WHERE slug = ?',
+      [shared ? 1 : 0, slug]
     );
   },
 

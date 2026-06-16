@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo } from 'react';
+import { useEffect, useState, useMemo, useCallback } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext.jsx';
 import { api } from '../api/client.js';
@@ -91,6 +91,20 @@ export default function MyPage() {
     }
   };
 
+  const handleToggleShare = useCallback(async (slug, currentShared) => {
+    try {
+      const res = await api.updateContent(slug, { shared: !currentShared });
+      // 更新本地状态
+      setItems((prev) =>
+        prev.map((it) =>
+          it.slug === slug ? { ...it, shared: res.data.shared } : it
+        )
+      );
+    } catch (e) {
+      alert('操作失败：' + e.message);
+    }
+  }, []);
+
   const handleDelete = async (slug) => {
     if (!confirm('确定删除这条内容？')) return;
     try {
@@ -169,6 +183,13 @@ export default function MyPage() {
                 <ContentCard item={item} />
                 <div className="content-row-meta">
                   <span className="content-row-time">发布于 {formatDate(item.createdAt)}</span>
+                  <button
+                    className={`btn-card-share ${item.shared ? 'is-shared' : ''}`}
+                    onClick={() => handleToggleShare(item.slug, item.shared)}
+                    title={item.shared ? '已分享，点击取消' : '未分享，点击开启'}
+                  >
+                    {item.shared ? '🔗 已分享' : '🔒 未分享'}
+                  </button>
                   <button
                     className="btn-card-delete"
                     onClick={() => handleDelete(item.slug)}

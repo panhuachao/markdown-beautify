@@ -195,6 +195,30 @@
   color: #999;
 }
 
+.btn-card-share {
+  background: #fff;
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  padding: 2px 10px;
+  font-size: 11px;
+  cursor: pointer;
+  transition: all 0.15s;
+  font-family: inherit;
+  color: #6a737d;
+}
+.btn-card-share:hover {
+  background: #f0f2f5;
+  border-color: #d0d7de;
+}
+.btn-card-share.is-shared {
+  background: #e6f7ed;
+  border-color: #b7ebc8;
+  color: #28a745;
+}
+.btn-card-share.is-shared:hover {
+  background: #d4edda;
+}
+
 .btn-card-delete {
   background: #fff;
   border: 1px solid var(--color-border);

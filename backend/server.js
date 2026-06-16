@@ -72,6 +72,19 @@ marked.setOptions({
 
 // ---------- 工具函数 ----------
 
+/** 返回东八区 ISO 时间字符串（带 +08:00 偏移） */
+function toCSTISO(date) {
+  if (!date) date = new Date();
+  if (typeof date === 'string') date = new Date(date);
+  const offset = 8 * 60; // 东八区分钟偏移
+  const local = new Date(date.getTime() + offset * 60 * 1000);
+  const iso = local.toISOString().replace('Z', '');
+  const sign = '+';
+  const hours = String(Math.floor(Math.abs(offset) / 60)).padStart(2, '0');
+  const minutes = String(Math.abs(offset) % 60).padStart(2, '0');
+  return iso + sign + hours + ':' + minutes;
+}
+
 function extractTitle(markdown, fallback) {
   const m = markdown.match(/^#\s+(.+)$/m);
   return m ? m[1].trim() : fallback || '未命名内容';
@@ -144,7 +157,7 @@ function requireAuth(req, res, next) {
 // ============================================================
 
 app.get('/health', (req, res) => {
-  res.json({ status: 'ok', uptime: process.uptime(), timestamp: new Date().toISOString() });
+  res.json({ status: 'ok', uptime: process.uptime(), timestamp: toCSTISO() });
 });
 
 app.use('/api', authMiddleware);
@@ -315,6 +328,7 @@ app.get('/api/contents', async (req, res) => {
       excerpt: it.excerpt,
       tags: it.tags,
       viewCount: it.viewCount,
+      shared: it.shared,
       createdAt: it.createdAt,
       url: `${baseUrl}/p/${it.slug}`
     }))
@@ -323,10 +337,21 @@ app.get('/api/contents', async (req, res) => {
 
 /**
  * GET /api/contents/:slug
+ *   - 未登录用户只能查看 shared = true 的内容
+ *   - 已登录用户可以查看自己的内容（无论是否 shared）
  */
 app.get('/api/contents/:slug', async (req, res) => {
   const meta = await db.Contents.findBySlug(req.params.slug);
   if (!meta) return res.status(404).json({ success: false, error: '内容不存在' });
+
+  // 权限校验：未登录且未分享 → 403
+  if (!req.user && !meta.shared) {
+    return res.status(403).json({ success: false, error: '该内容未公开分享' });
+  }
+  // 已登录但非作者且未分享 → 403
+  if (req.user && meta.userId && meta.userId !== req.user.id && !meta.shared) {
+    return res.status(403).json({ success: false, error: '该内容未公开分享' });
+  }
 
   await db.Contents.incrementView(meta.slug);
   const html = marked.parse(meta.markdown);
@@ -381,6 +406,26 @@ app.post('/api/publish', async (req, res) => {
     console.error('[publish] error:', err);
     res.status(500).json({ success: false, error: err.message });
   }
+});
+
+/**
+ * PATCH /api/contents/:slug
+ * 更新内容字段（如 shared 分享开关）
+ */
+app.patch('/api/contents/:slug', requireAuth, async (req, res) => {
+  const meta = await db.Contents.findBySlug(req.params.slug);
+  if (!meta) return res.status(404).json({ success: false, error: '内容不存在' });
+  if (meta.userId && meta.userId !== req.user.id) {
+    return res.status(403).json({ success: false, error: '无权修改他人内容' });
+  }
+
+  const { shared } = req.body || {};
+  if (shared !== undefined) {
+    await db.Contents.updateShared(req.params.slug, !!shared);
+  }
+
+  const updated = await db.Contents.findBySlug(req.params.slug);
+  res.json({ success: true, data: updated });
 });
 
 /**

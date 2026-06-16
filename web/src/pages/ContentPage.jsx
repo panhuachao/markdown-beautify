@@ -1,5 +1,6 @@
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState, useRef, useCallback } from 'react';
 import { useParams, Link } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext.jsx';
 import { api } from '../api/client.js';
 import './ContentPage.css';
 
@@ -10,13 +11,41 @@ function formatDate(iso) {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }
 
+/**
+ * 通用复制方法
+ * @returns {Promise<boolean>} 是否复制成功
+ */
+async function copyToClipboard(text) {
+  try {
+    if (navigator.clipboard && window.isSecureContext) {
+      await navigator.clipboard.writeText(text);
+      return true;
+    }
+    // 降级方案：临时 textarea + execCommand
+    const ta = document.createElement('textarea');
+    ta.value = text;
+    ta.style.position = 'fixed';
+    ta.style.left = '-9999px';
+    document.body.appendChild(ta);
+    ta.select();
+    const ok = document.execCommand('copy');
+    document.body.removeChild(ta);
+    return ok;
+  } catch (e) {
+    return false;
+  }
+}
+
 export default function ContentPage() {
   const { slug } = useParams();
+  const { user } = useAuth();
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [copied, setCopied] = useState(null); // 'url' | 'md' | null
   const [showRaw, setShowRaw] = useState(false);
+  const [showShare, setShowShare] = useState(false);
+  const [sharing, setSharing] = useState(false);
   const toastTimer = useRef(null);
 
   useEffect(() => {
@@ -34,48 +63,54 @@ export default function ContentPage() {
     };
   }, []);
 
-  /**
-   * 通用复制方法 + Toast 反馈
-   */
-  const copyText = async (text, type) => {
-    let ok = false;
-    try {
-      if (navigator.clipboard && window.isSecureContext) {
-        await navigator.clipboard.writeText(text);
-        ok = true;
-      } else {
-        // 降级方案：临时 textarea + execCommand
-        const ta = document.createElement('textarea');
-        ta.value = text;
-        ta.style.position = 'fixed';
-        ta.style.left = '-9999px';
-        document.body.appendChild(ta);
-        ta.select();
-        ok = document.execCommand('copy');
-        document.body.removeChild(ta);
+  const showToast = useCallback((type) => {
+    setCopied(type);
+    if (toastTimer.current) clearTimeout(toastTimer.current);
+    toastTimer.current = setTimeout(() => setCopied(null), 1800);
+  }, []);
+
+  const handleCopyLink = useCallback(async () => {
+    const ok = await copyToClipboard(window.location.href);
+    if (ok) showToast('url');
+    else alert('复制失败，请手动复制');
+  }, [showToast]);
+
+  const handleCopyMd = useCallback(async () => {
+    if (!data) return;
+    const ok = await copyToClipboard(data.markdown);
+    if (ok) showToast('md');
+    else alert('复制失败，请手动复制');
+  }, [data, showToast]);
+
+  /** 点击分享按钮：先调用后端设置 shared=true，再打开弹窗 */
+  const handleOpenShare = useCallback(async () => {
+    // 只有作者才能设置分享
+    if (user && data && data.userId === user.id) {
+      setSharing(true);
+      try {
+        await api.updateContent(slug, { shared: true });
+        setData((prev) => prev ? { ...prev, shared: true } : prev);
+      } catch (e) {
+        console.error('设置分享失败:', e);
+      } finally {
+        setSharing(false);
       }
-    } catch (e) {
-      ok = false;
     }
+    setShowShare(true);
+  }, [slug, user, data]);
 
-    if (ok) {
-      setCopied(type);
-      if (toastTimer.current) clearTimeout(toastTimer.current);
-      toastTimer.current = setTimeout(() => setCopied(null), 1800);
-    } else {
-      alert('复制失败，请手动复制');
-    }
-  };
-
-  // ESC 关闭原始 MD 弹层
+  // ESC 关闭弹层
   useEffect(() => {
-    if (!showRaw) return;
+    if (!showRaw && !showShare) return;
     const handler = (e) => {
-      if (e.key === 'Escape') setShowRaw(false);
+      if (e.key === 'Escape') {
+        setShowRaw(false);
+        setShowShare(false);
+      }
     };
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
-  }, [showRaw]);
+  }, [showRaw, showShare]);
 
   if (loading) {
     return <div className="content-page"><div className="state">加载中…</div></div>;
@@ -95,6 +130,10 @@ export default function ContentPage() {
     );
   }
 
+  const pageUrl = window.location.href;
+  const encodedUrl = encodeURIComponent(pageUrl);
+  const encodedTitle = encodeURIComponent(data.title);
+
   return (
     <div className="content-page">
       <article className="container">
@@ -108,22 +147,16 @@ export default function ContentPage() {
             ))}
           </div>
           <div className="content-actions">
-            <button
-              onClick={() => copyText(window.location.href, 'url')}
-              className={`btn-share ${copied === 'url' ? 'is-success' : ''}`}
-            >
-              {copied === 'url' ? '✓ 已复制链接' : '🔗 复制分享链接'}
+            <button onClick={handleOpenShare} className="btn-share" disabled={sharing}>
+              {sharing ? '⏳ 处理中…' : '📤 分享'}
             </button>
             <button
-              onClick={() => copyText(data.markdown, 'md')}
+              onClick={handleCopyMd}
               className={`btn-copy-md ${copied === 'md' ? 'is-success' : ''}`}
             >
-              {copied === 'md' ? '✓ 已复制 Markdown' : '📋 复制 Markdown'}
+              {copied === 'md' ? '✓ 已复制' : '📋 复制 Markdown'}
             </button>
-            <button
-              onClick={() => setShowRaw(true)}
-              className="btn-raw"
-            >
+            <button onClick={() => setShowRaw(true)} className="btn-raw">
               📄 查看原始
             </button>
             <Link to="/" className="btn-back">← 返回</Link>
@@ -140,6 +173,43 @@ export default function ContentPage() {
       {copied && (
         <div className="copy-toast">
           {copied === 'url' ? '🔗 分享链接已复制到剪贴板' : '📋 Markdown 原文已复制到剪贴板'}
+        </div>
+      )}
+
+      {/* 分享弹层 — 仅显示链接 + 复制按钮 */}
+      {showShare && (
+        <div className="share-modal-mask" onClick={() => setShowShare(false)}>
+          <div className="share-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="share-modal-header">
+              <h3 className="share-modal-title">📤 分享链接</h3>
+              <button
+                className="share-modal-close"
+                onClick={() => setShowShare(false)}
+                aria-label="关闭"
+              >
+                ✕
+              </button>
+            </div>
+            <div className="share-modal-body">
+              <div className="share-section">
+                <label className="share-label">将此链接发送给好友，即可查看内容</label>
+                <div className="share-url-row">
+                  <input
+                    className="share-url-input"
+                    value={pageUrl}
+                    readOnly
+                    onClick={(e) => e.target.select()}
+                  />
+                  <button
+                    onClick={handleCopyLink}
+                    className={`share-copy-btn ${copied === 'url' ? 'is-success' : ''}`}
+                  >
+                    {copied === 'url' ? '✓ 已复制' : '复制链接'}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
       )}
 
