@@ -23,9 +23,10 @@ function getPool() {
     charset: 'utf8mb4',
     timezone: 'Z',
     // 关键：把 JSON 列解析为对象
+    // 注意：field.string() 默认用 latin1 编码，必须传 'utf8' 否则中文乱码
     typeCast: function (field, next) {
       if (field.type === 'JSON') {
-        const v = field.string();
+        const v = field.string('utf8');
         return v == null ? null : JSON.parse(v);
       }
       return next();
@@ -57,6 +58,19 @@ function rowToUser(r) {
   };
 }
 
+function parseTags(v) {
+  if (Array.isArray(v)) return v;
+  if (typeof v === 'string') {
+    try {
+      const parsed = JSON.parse(v);
+      return Array.isArray(parsed) ? parsed : [];
+    } catch (e) {
+      return [];
+    }
+  }
+  return [];
+}
+
 function rowToContent(r) {
   if (!r) return null;
   return {
@@ -65,7 +79,7 @@ function rowToContent(r) {
     title: r.title,
     excerpt: r.excerpt || '',
     markdown: r.markdown,
-    tags: Array.isArray(r.tags_json) ? r.tags_json : [],
+    tags: parseTags(r.tags_json),
     viewCount: r.view_count || 0,
     source: r.source,
     status: r.status,

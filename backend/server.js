@@ -140,26 +140,6 @@ function requireAuth(req, res, next) {
 }
 
 // ============================================================
-//              前端静态文件托管（SPA）
-// ============================================================
-
-const WEB_DIST = path.join(__dirname, '..', 'web', 'dist');
-if (require('fs').existsSync(WEB_DIST)) {
-  // 托管前端构建产物
-  app.use(express.static(WEB_DIST));
-  // SPA fallback：所有非 API 路由返回 index.html
-  app.get('*', (req, res) => {
-    if (req.path.startsWith('/api/') || req.path.startsWith('/health')) {
-      return res.status(404).json({ error: 'Not Found' });
-    }
-    res.sendFile(path.join(WEB_DIST, 'index.html'));
-  });
-  console.log(`[startup] 📦 前端静态文件已挂载: ${WEB_DIST}`);
-} else {
-  console.log(`[startup] ⚠️  前端构建产物不存在 (${WEB_DIST})，仅提供 API`);
-}
-
-// ============================================================
 //                       基础路由
 // ============================================================
 
