@@ -7,9 +7,11 @@ import UploadModal from '../components/UploadModal.jsx';
 import './MyPage.css';
 
 const TABS = [
-  { key: 'today', label: '今日', match: (d) => isSameDay(d, new Date()) },
-  { key: 'all', label: '所有', match: () => true }
+  { key: 'unread', label: '未读', filter: (items) => items.filter((it) => !it.read) },
+  { key: 'today', label: '今日', filter: (items) => items.filter((it) => isSameDay(new Date(it.createdAt), new Date())) },
+  { key: 'all', label: '所有', filter: (items) => items }
 ];
+
 
 /** 判断两个 Date 是否是同一天（本地时区） */
 function isSameDay(a, b) {
@@ -32,7 +34,7 @@ export default function MyPage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const { isLoggedIn, loading: authLoading, user } = useAuth();
 
-  const initialTab = searchParams.get('tab') === 'all' ? 'all' : 'today';
+  const initialTab = searchParams.get('tab') === 'all' ? 'all' : 'unread';
   const [activeTab, setActiveTab] = useState(initialTab);
 
   const [items, setItems] = useState([]);
@@ -70,15 +72,20 @@ export default function MyPage() {
   // 按 tab 过滤
   const filtered = useMemo(() => {
     const tab = TABS.find((t) => t.key === activeTab) || TABS[0];
-    return items.filter((it) => tab.match(new Date(it.createdAt)));
+    return tab.filter(items);
   }, [items, activeTab]);
 
   // 统计
+  const unreadCount = useMemo(
+    () => items.filter((it) => !it.read).length,
+    [items]
+  );
   const todayCount = useMemo(
     () => items.filter((it) => isSameDay(new Date(it.createdAt), new Date())).length,
     [items]
   );
   const totalCount = items.length;
+
 
   const handleUploadSuccess = async () => {
     setShowUpload(false);
@@ -141,8 +148,9 @@ export default function MyPage() {
       <div className="my-tabs-wrap">
         <div className="my-tabs">
           {TABS.map((tab) => {
-            const count = tab.key === 'today' ? todayCount : totalCount;
+            const count = tab.key === 'unread' ? unreadCount : tab.key === 'today' ? todayCount : totalCount;
             return (
+
               <button
                 key={tab.key}
                 className={`my-tab ${activeTab === tab.key ? 'is-active' : ''}`}
@@ -163,7 +171,12 @@ export default function MyPage() {
           {error && <div className="state state--error">加载失败：{error}</div>}
           {!loading && !error && filtered.length === 0 && (
             <div className="state state--empty">
-              {activeTab === 'today' ? (
+              {activeTab === 'unread' ? (
+                <>
+                  <p>✅ 所有内容都已阅读</p>
+                  <p className="hint">有新内容时会在这里显示</p>
+                </>
+              ) : activeTab === 'today' ? (
                 <>
                   <p>📭 今天还没有内容</p>
                   <p className="hint">通过 AI Agent 发布的内容会出现在这里</p>
@@ -176,6 +189,7 @@ export default function MyPage() {
               )}
             </div>
           )}
+
           {!loading &&
             !error &&
             filtered.map((item) => (

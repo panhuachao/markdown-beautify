@@ -51,10 +51,17 @@ export default function ContentPage() {
   useEffect(() => {
     setLoading(true);
     api.getContent(slug)
-      .then((res) => setData(res.data))
+      .then((res) => {
+        setData(res.data);
+        // 如果是自己的内容，自动标记为已读
+        if (user && res.data.userId === user.id) {
+          api.markAsRead(slug).catch(() => {});
+        }
+      })
       .catch((e) => setError(e.message))
       .finally(() => setLoading(false));
-  }, [slug]);
+  }, [slug, user]);
+
 
   // 卸载时清理 toast 计时器
   useEffect(() => {

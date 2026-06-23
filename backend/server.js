@@ -308,15 +308,18 @@ app.delete('/api/keys/:id', requireAuth, async (req, res) => {
  * GET /api/contents
  *   - 已登录：默认仅看自己的内容，?all=1 看公开
  *   - 未登录：?all=1 看公开
+ *   - ?unread=1 仅看未读（仅对已登录用户自己的内容有效）
  */
 app.get('/api/contents', async (req, res) => {
   const all = req.query.all === '1';
+  const unread = req.query.unread === '1';
   let items;
   if (req.user && !all) {
-    items = await db.Contents.list({ userId: req.user.id });
+    items = await db.Contents.list({ userId: req.user.id, unread });
   } else {
     items = await db.Contents.list({ publicOnly: true });
   }
+
   const baseUrl = `${req.protocol}://${req.get('host')}`;
   res.json({
     success: true,
@@ -329,7 +332,9 @@ app.get('/api/contents', async (req, res) => {
       tags: it.tags,
       viewCount: it.viewCount,
       shared: it.shared,
+      read: it.read,
       createdAt: it.createdAt,
+
       url: `${baseUrl}/p/${it.slug}`
     }))
   });
@@ -427,6 +432,21 @@ app.patch('/api/contents/:slug', requireAuth, async (req, res) => {
   const updated = await db.Contents.findBySlug(req.params.slug);
   res.json({ success: true, data: updated });
 });
+
+/**
+ * POST /api/contents/:slug/read
+ * 标记内容为已读（仅作者可操作）
+ */
+app.post('/api/contents/:slug/read', requireAuth, async (req, res) => {
+  const meta = await db.Contents.findBySlug(req.params.slug);
+  if (!meta) return res.status(404).json({ success: false, error: '内容不存在' });
+  if (meta.userId && meta.userId !== req.user.id) {
+    return res.status(403).json({ success: false, error: '无权操作他人内容' });
+  }
+  await db.Contents.markAsRead(req.params.slug);
+  res.json({ success: true, message: '已标记为已读' });
+});
+
 
 /**
  * DELETE /api/contents/:slug

@@ -99,7 +99,13 @@ export const api = {
       body: JSON.stringify(payload)
     });
   },
+  markAsRead(slug) {
+    return request(`/contents/${slug}/read`, {
+      method: 'POST'
+    });
+  },
   deleteContent(slug) {
+
     return request(`/contents/${slug}`, { method: 'DELETE' });
   },
 

@@ -35,8 +35,10 @@ CREATE TABLE IF NOT EXISTS contents (
   source TEXT NOT NULL DEFAULT 'agent',
   status TEXT NOT NULL DEFAULT 'published',
   shared INTEGER NOT NULL DEFAULT 0,
+  `read` INTEGER NOT NULL DEFAULT 0,
   created_at TEXT NOT NULL,
   updated_at TEXT NOT NULL
+
 );
 
 CREATE TABLE IF NOT EXISTS api_keys (
@@ -166,11 +168,12 @@ const Contents = {
       source: r.source,
       status: r.status,
       shared: !!r.shared,
+      read: !!r.read,
       createdAt: toISO(r.created_at),
       updatedAt: toISO(r.updated_at)
     };
   },
-  async list({ userId, publicOnly, since, limit = 200, offset = 0 } = {}) {
+  async list({ userId, publicOnly, unread, since, limit = 200, offset = 0 } = {}) {
     let sql = 'SELECT * FROM contents';
     const where = [];
     const params = [];
@@ -181,10 +184,14 @@ const Contents = {
     if (publicOnly) {
       where.push('shared = 1');
     }
+    if (unread) {
+      where.push('`read` = 0');
+    }
     if (since) {
       where.push('created_at >= ?');
       params.push(new Date(since).toISOString());
     }
+
     if (where.length) sql += ' WHERE ' + where.join(' AND ');
     sql += ' ORDER BY created_at DESC LIMIT ? OFFSET ?';
     params.push(limit, offset);
@@ -199,9 +206,11 @@ const Contents = {
       viewCount: r.view_count || 0,
       source: r.source,
       status: r.status,
+      read: !!r.read,
       createdAt: toISO(r.created_at),
       updatedAt: toISO(r.updated_at)
     }));
+
   },
   async count({ userId, publicOnly } = {}) {
     let sql = 'SELECT COUNT(*) AS n FROM contents';
@@ -228,7 +237,13 @@ const Contents = {
       .prepare('UPDATE contents SET shared = ? WHERE slug = ?')
       .run(shared ? 1 : 0, slug);
   },
+  async markAsRead(slug) {
+    getDb()
+      .prepare('UPDATE contents SET `read` = 1 WHERE slug = ?')
+      .run(slug);
+  },
   async delete(slug) {
+
     const r = getDb().prepare('DELETE FROM contents WHERE slug = ?').run(slug);
     return r.changes > 0;
   }

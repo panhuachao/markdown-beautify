@@ -84,6 +84,7 @@ function rowToContent(r) {
     source: r.source,
     status: r.status,
     shared: !!r.shared, // 0/1 → boolean
+    read: !!r.read,     // 0/1 → boolean
     createdAt: toISO(r.created_at),
     updatedAt: toISO(r.updated_at)
   };
@@ -206,10 +207,11 @@ const Contents = {
    * options:
    *   - userId: 仅看某用户的内容
    *   - publicOnly: 仅看公开（user_id IS NULL）的内容
+   *   - unread: 仅看未读（read = 0）
    *   - since: ISO 时间字符串，仅返回 created_at >= since
    *   - limit, offset
    */
-  async list({ userId, publicOnly, since, limit = 200, offset = 0 } = {}) {
+  async list({ userId, publicOnly, unread, since, limit = 200, offset = 0 } = {}) {
     const where = [];
     const params = [];
     if (userId) {
@@ -219,10 +221,14 @@ const Contents = {
     if (publicOnly) {
       where.push('shared = 1');
     }
+    if (unread) {
+      where.push('`read` = 0');
+    }
     if (since) {
       where.push('created_at >= ?');
       params.push(new Date(since));
     }
+
     const whereSql = where.length ? `WHERE ${where.join(' AND ')}` : '';
     // LIMIT/OFFSET 强制转整数后内联，避免 mysql2 prepared statement 对整型 LIMIT 报错
     // （ER_WRONG_ARGUMENTS "Incorrect arguments to mysqld_stmt_execute"）
@@ -267,7 +273,15 @@ const Contents = {
     );
   },
 
+  async markAsRead(slug) {
+    await getPool().execute(
+      'UPDATE contents SET `read` = 1 WHERE slug = ?',
+      [slug]
+    );
+  },
+
   async delete(slug) {
+
     const [res] = await getPool().execute(
       'DELETE FROM contents WHERE slug = ?',
       [slug]

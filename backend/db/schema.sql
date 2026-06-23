@@ -38,6 +38,7 @@ CREATE TABLE IF NOT EXISTS contents (
   source       VARCHAR(16)   NOT NULL DEFAULT 'agent',
   status       VARCHAR(16)   NOT NULL DEFAULT 'published',
   shared       TINYINT(1)    NOT NULL DEFAULT 0,      -- 0=仅自己可见, 1=分享公开访问
+  `read`       TINYINT(1)    NOT NULL DEFAULT 0,      -- 0=未读, 1=已读
   created_at   DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at   DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   INDEX idx_user_id (user_id),
